@@ -1,30 +1,3 @@
-// const express = require('express');
-// const app = express();
-
-// app.get('/', (request, response) => {
-  
-//   });
-  
-// const urlLogger = (request, response, next) => {
-//   console.log('Request URL: ', request.url);
-//   next();
-// };
-    
-// const timeLogger = (request, response, next) => {
-//   console.log('Datetime:', new Date(Date.now()).toString());
-//   next();
-// };
-
-// app.use(urlLogger, timeLogger);
-//   app.get('/json', (request, response) => {
-//   response.status(200).json({"name": "sdfsdfsdf"});
-// });
-
-// app.listen(3000,() => {
-//   console.log('express intro running on localhost:3000');
-// });
-          
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
@@ -51,6 +24,48 @@ app.get('/api/v1/events', (request, response) => {
     })
 });
 
+app.get('/api/v1/users', (request, response) => {
+  database('users').select()
+    .then((user) => {
+      response.status(200).json(user)
+    })
+    .catch((error) => {
+      response.status(500).json({error});
+    })
+});
+
+app.get('/api/v1/users/:id', (request, response) => {
+  database('users').where('user_id', request.params.id).select()
+    .then((user) => {
+      response.status(200).json(user);
+    })
+    .catch((error) => {
+      response.status(500).json({error})
+    })
+});
+
+app.post('/api/v1/users/new', (request, response) => {
+  const user = request.body;
+
+  for(let requiredParameters of ['group_id', 'email', 'name', 'authrocket_id']) {
+    if(!user[requiredParameters]) {
+      return response
+        .status(422)
+        .send({ error: `missing parameter ${requiredParameters}`})
+    }
+  }  
+
+  database('users').insert(user, 'user_id')
+    .then(event => {
+      response.status(200).json({status: 'success'})
+    })
+    .catch(error => {
+      response.status(500).json({error});
+    })
+});
+
+
+
 app.post('/api/v1/eventtracking/new', (request, response) => {
   const event = request.body;
 
@@ -71,69 +86,43 @@ app.post('/api/v1/eventtracking/new', (request, response) => {
     })
 });
 
-
-
-app.post('/api/v1/papers', (request, response) => {
-  const paper = request.body;
-  
-  for(let requiredParameters of ['title', 'author']) {
-    if(!paper[requiredParameters]) {
-      return response
-        .status(422)
-        .send({ error: `expected some good params but you forgot ${requiredParameters}. that was not a good move`});
-    }
-  }
-
-  database('papers').insert(paper, 'id')
-    .then(paper => {
-      response.status(201).json({id: paper[0]});
+app.get('/api/v1/group', (request, response) => {
+  database('group').select()
+    .then((group) => {
+      response.status(200).json(group);
     })
     .catch(error => {
-      response.status(500).json({error});
+      response.status(500).json({error})
     });
 });
 
-
-app.get('/api/v1/footnotes', (request, response) => {
-  database('footnotes').select()
-    .then((footnotes) => {
-      response.status(200).json(footnotes);
+app.get('/api/v1/group/:id', (request, response) => {
+  database('group').where('group_id', request.params.id).select()
+    .then((group) => {
+      response.status(200).json(group)
     })
     .catch((error) => {
+      response.status(500).json({error})
+    });
+});
+
+app.post('/api/v1/group/new', (request, response) => {
+  const group = request.body;
+
+  for(let requiredParameters of ['group_name', 'group_passphrase', 'weekly_points', 'administrator_id']) {
+    if(!group[requiredParameters]) {
+      return response
+        .status(422)
+        .send({ error: `missing parameter ${requiredParameters}`})
+    }
+  }  
+
+
+  database('group').insert(group, 'group_id')
+    .then(event => {
+      response.status(200).json({status: 'success'})
+    })
+    .catch(error => {
       response.status(500).json({error});
-    });
-});
-
-
-
-app.get('/api/v1/papers/:id', (request, response) => {
-  database('papers').where('id', request.params.id).select()
-    .then(papers => {
-      if(papers.length) {
-        response.status(200).json(papers);
-      } else {
-        response.status(404).json({
-          error: `could not find paper with an id of ${request.params.id}`
-        });
-      }
-    })
-    .catch(error => {
-      response.status(500).json({ error });
-    });
-});
-
-app.get('/api/v1/footnotes/:id', (request, response) => {
-  database('footnotes').where('paper_id', request.params.id).select()
-    .then(footnotes => {
-      if(footnotes.length) {
-        response.status(200).json(footnotes);
-      } else {
-        response.status(404).json({
-          error: `could not find footnotes that belong to paper with id ${request.params.id}`
-        });
-      }
-    })
-    .catch(error => {
-      response.status(500).json({ error });
     })
 });

@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+const cors = require('express-cors');
 const path = require('path');
 const environment = process.env.NODE_ENV || 'development';
 const configuration = require('./knexfile')[environment];
@@ -17,13 +18,21 @@ nPBKaijTKwL5jtOKCLY32KHE2I+VTfI1q/kyCxFCFYB+OHRZC1Rk23a4OYxnPBlD
 UjL6DOzD6HX4KvolXDuJ3UkA28jU9K75Z9wzrzARgQEq6c8E+6QaCJb2/9M8ncDz
 8wIDAQAB
 -----END PUBLIC KEY-----
-`
+`;
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 
+const corsOptions = {
+  allowedOrigins: ['localhost:3001'],
+  preflightContinue: true,
+  headers: ['Content-Type', 'x-token', 'x-temp']
+};
+
+app.use(cors(corsOptions));
+
 app.listen(3000, () => {
   console.log('database is running on localhost:3000');
-  // console.log(key);
 });
 
 validate = (request) => {
@@ -44,8 +53,9 @@ validate = (request) => {
   //this function needs to be run on every api call
 };
 
-app.get('/login', (request,response) => {
-  request.headers['x-token'] = request.query.token;
+app.get('/api/v1/login', (request,response) => {
+
+  // request.headers['x-token'] = request.query.token;
   const userObject = validate(request);
   const newUser = {
     group_id: null,
@@ -54,12 +64,14 @@ app.get('/login', (request,response) => {
     authrocket_id: userObject.uid
   };
 
+  console.log(newUser);
+
   database('users').where('authrocket_id', userObject.uid).select()
     .then((user) =>{
       if (!user.length) {
         return createUser(request, response, newUser);
       }
-      response.status(200).json(user);
+      response.status(200).json(newUser);
     })
     .catch((error => {
       response.status(404).json({error});
@@ -75,6 +87,8 @@ const createUser = ( request, response, user ) => {
       response.status(500).json({error});
     });
 };
+
+
 
 app.get('/api/v1/users/:id', (request, response) => {
   const userObject = validate(request);

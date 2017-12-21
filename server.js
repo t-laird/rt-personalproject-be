@@ -6,13 +6,40 @@ const environment = process.env.NODE_ENV || 'development';
 const configuration = require('./knexfile')[environment];
 const database = require('knex')(configuration);
 
+const NodeRSA = require('node-rsa');
+
+var key = new NodeRSA();
+key.importKey(
+  '-----BEGIN PUBLIC KEY-----\n'+
+  'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3fw1WN9UXW2DT4dbsDXZ77R5PpOp\n'+
+  'lPwwg548Eiurx0ZX5X0LH7OSfXcpD\n'+
+  'Ll0C9yQLg7KsN0fKA1pChNflHAKZaqJtMKgLnXGTOamAeLXct23oSwtP\n'+
+  '3DSieqZJ\n'+
+  'RZxd7irPBgK4jEm09bkfITqY82BoqaBIDkuNiORu8pyc7C9FVfIH4JuLcd1URvzRl\n'+
+  '/8hWDXry4a/pa3zwKRCHpnPBKaijTKwL5jtOKCLY32KHE2I\n'+
+  'VTfI1q/kyCxFCFYB+OHRZC1Rk23a4OYxnPBlDUjL6DOzD6HX4KvolXDuJ3UkA28jU9K75Z9wzrzARgQEq6c8E\n'+
+  '6QaCJb2/9M8ncDz8wIDAQAB\n'+
+  '-----END PUBLIC KEY-----');
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 
+
+
 app.listen(3000, () => {
   console.log('database is running on localhost:3000');
+  console.log(key);
 });
+
+// app.post('/api/v1/signup/:jwt', (request, response) => {
+
+//   var cryptographer = new Jose.WebCryptographer();
+//   cryptographer.setContentSignAlgorithm("RS256");
+
+
+// })
+
+
 
 app.get('/api/v1/events', (request, response) => {
   database('eventtracking').select()

@@ -13,7 +13,11 @@
   "dependencies": {
     "body-parser": "^1.18.2",
     "express": "^4.16.2",
+    "jose-jwe-jws": "^0.1.6",
+    "jshint": "^2.9.5",
+    "jsrsasign": "^8.0.4",
     "knex": "^0.14.2",
+    "node-rsa": "^0.4.2",
     "path": "^0.12.7",
     "pg": "^7.4.0"
   },

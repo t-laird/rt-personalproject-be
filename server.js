@@ -31,24 +31,63 @@ validate = (request) => {
   var pubkey = KEYUTIL.getKey(key);
   var isValid = KJUR.jws.JWS.verifyJWT(jwToken, pubkey, {alg: ['RS256']});
   //if isValid is false, we should throw an error before trying payload
-  var payloadObj = KJUR.jws.JWS.readSafeJSONString(b64utoutf8(jwToken.split(".")[1]));
-  console.log(isValid, payloadObj)
+  if (isValid) {
+    var payloadObj = KJUR.jws.JWS.readSafeJSONString(b64utoutf8(jwToken.split(".")[1]));
+    return payloadObj;
+  } else {
+    throw Error('problem with validating user - please signin again');
+  }
   //to get current user, take uid returned from validation and match with users.authrocketid
   //if not found, create one
   //then return current user
 
   //this function needs to be run on every api call
-}
+};
+
+app.get('/login', (request,response) => {
+  request.headers['x-token'] = request.query.token;
+  const userObject = validate(request);
+  const newUser = {
+    group_id: null,
+    email: userObject.un,
+    name: userObject.n,
+    authrocket_id: userObject.uid
+  };
+
+  database('users').where('authrocket_id', userObject.uid).select()
+    .then((user) =>{
+      if (!user.length) {
+        return createUser(request, response, newUser);
+      }
+      response.status(200).json(user);
+    })
+    .catch((error => {
+      response.status(404).json({error});
+    }));
+});
+
+const createUser = ( request, response, user ) => {
+  database('users').insert(user)
+    .then( user => {
+      response.status(200).json({status: 'success'});
+    })
+    .catch( error => {
+      response.status(500).json({error});
+    });
+};
 
 app.get('/api/v1/users/:id', (request, response) => {
-  validate(request);
+  const userObject = validate(request);
+  console.log(userObject);
+
   database('users').where('user_id', request.params.id).select()
     .then((user) => {
       response.status(200).json(user);
     })
     .catch((error) => {
-      response.status(500).json({error})
-    })
+      console.log('validationResponse: ', validationResponse);
+      // response.status(500).json({error: error})
+    });
 });
 
 app.get('/api/v1/events/:id/total', async (request, response) => {
@@ -93,27 +132,6 @@ app.get('/api/v1/users', (request, response) => {
 //       response.status(500).json({error})
 //     })
 // });
-
-app.post('/api/v1/users/new', (request, response) => {
-  const user = request.body;
-
-  for(let requiredParameters of ['group_id', 'email', 'name', 'authrocket_id']) {
-    if(!user[requiredParameters]) {
-      return response
-        .status(422)
-        .send({ error: `missing parameter ${requiredParameters}`})
-    }
-  }  
-
-  database('users').insert(user, 'user_id')
-    .then(event => {
-      response.status(200).json({status: 'success'})
-    })
-    .catch(error => {
-      response.status(500).json({error});
-    })
-});
-
 
 
 app.post('/api/v1/eventtracking/new', (request, response) => {
@@ -175,3 +193,23 @@ app.post('/api/v1/group/new', (request, response) => {
       response.status(500).json({error});
     })
 });
+
+// app.post('/api/v1/users/new', (request, response) => {
+//   const user = request.body;
+
+//   for(let requiredParameters of ['group_id', 'email', 'name', 'authrocket_id']) {
+//     if(!user[requiredParameters]) {
+//       return response
+//         .status(422)
+//         .send({ error: `missing parameter ${requiredParameters}`});
+//     }
+//   }  
+
+//   database('users').insert(user, 'user_id')
+//     .then(user => {
+//       response.status(200).json({status: 'success'});
+//     })
+//     .catch(error => {
+//       response.status(500).json({error: 'error adding user'});
+//     });
+// });

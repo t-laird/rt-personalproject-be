@@ -84,24 +84,23 @@ app.get('/api/v1/group/validate/:passphrase/:userid', (request, response) => {
         return response.status(404).json({error: 'group passphrase not found'});
       }
       addUserGroup(request, response, group[0], request.params.userid);
-
-    })
+    });
 });
 
 function addUserGroup(request, response, group, userid) {
   database('users').where('user_id', userid).select().update({group_id: group.group_id})
     .then(user => {
-      return findUser(request, response, {user});
+      return findUser(request, response, user);
     })
     .catch(error => {
       response.status(500).json({error: 'error adding group to user - please try again'});
     });
 }
 
-function findUser(request, response, userid) {
-  database('users').where('user_id', userid).select();
+function findUser(request, response, groupid) {
+  database('users').where('group_id', groupid).select()
     .then(user => {
-      return response.status(200).json({user})
+      return response.status(200).json(user);
     })
     .catch(error => {
       return response.status(500).json({error: 'user not found'});

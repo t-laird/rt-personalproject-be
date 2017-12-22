@@ -88,17 +88,25 @@ app.get('/api/v1/group/validate/:passphrase/:userid', (request, response) => {
     })
 });
 
-function addUserGroup(reqeust, response, group, userid) {
+function addUserGroup(request, response, group, userid) {
   database('users').where('user_id', userid).select().update({group_id: group.group_id})
     .then(user => {
-      console.log('found user', user);
-      response.status(200).json({user});
+      return findUser(request, response, {user});
     })
     .catch(error => {
       response.status(500).json({error: 'error adding group to user - please try again'});
     });
 }
 
+function findUser(request, response, userid) {
+  database('users').where('user_id', userid).select();
+    .then(user => {
+      return response.status(200).json({user})
+    })
+    .catch(error => {
+      return response.status(500).json({error: 'user not found'});
+    });
+}
 
 app.get('/api/v1/users/:id', (request, response) => {
   const userObject = validate(request);

@@ -71,7 +71,7 @@ app.get('/api/v1/login', (request,response) => {
       if (!user.length) {
         return createUser(request, response, newUser);
       }
-      response.status(200).json(newUser);
+      response.status(200).json(user);
     })
     .catch((error => {
       response.status(404).json({error});
@@ -87,6 +87,22 @@ const createUser = ( request, response, user ) => {
       response.status(500).json({error});
     });
 };
+
+app.patch('/api/v1/users/:id', (request, response) => {
+  const newGroupId = request.body;
+  if(!newGroupId.group_id) {
+    return response
+      .status(422)
+      .send({error: 'missing group_id parameter'});
+  }
+  
+  database('users').where('user_id', request.params.id).select().update({group_id: newGroupId.group_id})
+    .then(user => {
+      console.log(user)
+      response.status(204)
+      .json({message: 'haha it was ok i guess'});
+    });
+})
 
 
 

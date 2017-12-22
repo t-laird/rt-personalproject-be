@@ -79,7 +79,6 @@ app.get('/api/v1/group/validate/:passphrase/:userid', (request, response) => {
 
   database('group').where('group_passphrase', request.params.passphrase).select()
     .then(group => {
-      console.log('found group: ', group);
       if (!group.length) {
         return response.status(404).json({error: 'group passphrase not found'});
       }
@@ -90,7 +89,7 @@ app.get('/api/v1/group/validate/:passphrase/:userid', (request, response) => {
 function addUserGroup(request, response, group, userid) {
   database('users').where('user_id', userid).select().update({group_id: group.group_id})
     .then(user => {
-      return findUser(request, response, user);
+      return findUser(request, response, group.group_id);
     })
     .catch(error => {
       response.status(500).json({error: 'error adding group to user - please try again'});
@@ -98,6 +97,7 @@ function addUserGroup(request, response, group, userid) {
 }
 
 function findUser(request, response, groupid) {
+  console.log(groupid);
   database('users').where('group_id', groupid).select()
     .then(user => {
       return response.status(200).json(user);
@@ -207,7 +207,7 @@ app.get('/api/v1/group/:id', (request, response) => {
 
 app.post('/api/v1/group/new', (request, response) => {
   const group = request.body;
-
+  console.log(group);
   for(let requiredParameters of ['group_name', 'group_passphrase', 'weekly_points', 'administrator_id']) {
     if(!group[requiredParameters]) {
       return response

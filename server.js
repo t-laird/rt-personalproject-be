@@ -10,7 +10,9 @@ const { KEYUTIL, KJUR, b64utoutf8 } = require('jsrsasign');
 const key = require('./pubKey');
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.urlencoded({ extended: false }));
+// app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
 
 const corsOptions = {
   allowedOrigins: ['localhost:3001'],
@@ -207,6 +209,8 @@ app.get('/api/v1/group/:id', (request, response) => {
 
 app.post('/api/v1/group/new', (request, response) => {
   const group = request.body;
+  console.log(group)
+  console.log(request)
 
   for(let requiredParameters of ['group_name', 'group_passphrase', 'weekly_points', 'administrator_id']) {
     if(!group[requiredParameters]) {

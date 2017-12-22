@@ -217,13 +217,23 @@ app.post('/api/v1/group/new', (request, response) => {
   }  
 
   database('group').insert(group, 'group_id')
-    .then(event => {
-      response.status(200).json({status: 'success'})
+    .then(group => {
+      return getGroup(request, response, group[0])
     })
     .catch(error => {
       response.status(500).json({error});
     })
 });
+
+function getGroup(request, response, groupId) {
+  database('group').where('group_id', groupId).select()
+    .then(group => {
+      response.status(200).json(group);
+    })
+    .catch(error => {
+      response.status(500).json({error: 'idk it did not work'});
+    })
+}
 
 // app.post('/api/v1/users/new', (request, response) => {
 //   const user = request.body;

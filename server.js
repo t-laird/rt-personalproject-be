@@ -7,18 +7,7 @@ const environment = process.env.NODE_ENV || 'development';
 const configuration = require('./knexfile')[environment];
 const database = require('knex')(configuration);
 const { KEYUTIL, KJUR, b64utoutf8 } = require('jsrsasign');
-
-var key = `
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3fw1WN9UXW2DT4dbsDXZ
-77R5PpOp+lPwwg548Eiurx0ZX5X0LH7OSfXcpD+Ll0C9yQLg7KsN0fKA1pChNflH
-AKZaqJtMKgLnXGTOamAeLXct23oSwtP+3DSieqZJ+RZxd7irPBgK4jEm09bkfITq
-Y82BoqaBIDkuNiORu8pyc7C9FVfIH4JuLcd1URvzRl+/8hWDXry4a/pa3zwKRCHp
-nPBKaijTKwL5jtOKCLY32KHE2I+VTfI1q/kyCxFCFYB+OHRZC1Rk23a4OYxnPBlD
-UjL6DOzD6HX4KvolXDuJ3UkA28jU9K75Z9wzrzARgQEq6c8E+6QaCJb2/9M8ncDz
-8wIDAQAB
------END PUBLIC KEY-----
-`;
+const key = require('./pubKey');
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -54,8 +43,6 @@ validate = (request) => {
 };
 
 app.get('/api/v1/login', (request,response) => {
-
-  // request.headers['x-token'] = request.query.token;
   const userObject = validate(request);
   const newUser = {
     group_id: null,
@@ -88,22 +75,29 @@ const createUser = ( request, response, user ) => {
     });
 };
 
-app.patch('/api/v1/users/:id', (request, response) => {
-  const newGroupId = request.body;
-  if(!newGroupId.group_id) {
-    return response
-      .status(422)
-      .send({error: 'missing group_id parameter'});
-  }
-  
-  database('users').where('user_id', request.params.id).select().update({group_id: newGroupId.group_id})
-    .then(user => {
-      console.log(user)
-      response.status(204)
-      .json({message: 'haha it was ok i guess'});
-    });
-})
+app.get('/api/v1/group/validate/:passphrase/:userid', (request, response) => {
 
+  database('group').where('group_passphrase', request.params.passphrase).select()
+    .then(group => {
+      console.log('found group: ', group);
+      if (!group.length) {
+        return response.status(404).json({error: 'group passphrase not found'});
+      }
+      addUserGroup(request, response, group[0], request.params.userid);
+
+    })
+});
+
+function addUserGroup(reqeust, response, group, userid) {
+  database('users').where('user_id', userid).select().update({group_id: group.group_id})
+    .then(user => {
+      console.log('found user', user);
+      response.status(200).json({user});
+    })
+    .catch(error => {
+      response.status(500).json({error: 'error adding group to user - please try again'});
+    });
+}
 
 
 app.get('/api/v1/users/:id', (request, response) => {

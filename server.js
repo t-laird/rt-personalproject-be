@@ -24,6 +24,8 @@ app.listen(3000, () => {
   console.log('database is running on localhost:3000');
 });
 
+
+//////  VALIDATAION ////////
 validate = (request, response) => {
   try {
     var jwToken = request.headers['x-token'] || '';
@@ -36,9 +38,7 @@ validate = (request, response) => {
   } catch (e) {
     console.log('i errored')
   }
-
   console.log('invalid token')
-  
   response.status(401).json({error: 'Invalid token.  Please login again.'})
 };
 
@@ -105,12 +105,13 @@ app.get('/api/v1/users', async (request, response) => {
 });
 
 
+////////  CREATE NEW GROUP /////////
 app.post('/api/v1/group/new', async (request, response) => {
   const currentUser = await getCurrentUser(request, response)
   if (!currentUser) {
     console.log('no current user')
     return
-  }  //the first few lines should look the same for all calls
+  }
 
   const group = request.body;
 
@@ -134,30 +135,35 @@ app.post('/api/v1/group/new', async (request, response) => {
 
 
 
-app.get('/api/v1/group/validate/:passphrase/:userid', (request, response) => {
-
-  database('group').where('group_passphrase', request.params.passphrase).select()
-    .then(group => {
-      console.log('found group: ', group);
-      if (!group.length) {
-        return response.status(404).json({error: 'group passphrase not found'});
-      }
-      addUserGroup(request, response, group[0], request.params.userid);
-    });
-});
-
-function addUserGroup(request, response, group, userid) {
-  database('users').where('user_id', userid).select().update({group_id: group.group_id})
-    .then(user => {
-      return findUser(request, response, user);
+///////  ADD USER TO GROUP  ///////
+const addUserGroup = async (request, response, groupid, userid) => {
+  await database('users').where('user_id', userid).select().update({group_id: groupid})
+    .then(async (user) => {
+      const foundUser = await findUser(request, response, groupid);
+      return foundUser
     })
     .catch(error => {
       response.status(500).json({error: 'error adding group to user - please try again'});
     });
 }
 
-function findUser(request, response, groupid) {
-  database('users').where('group_id', groupid).select()
+app.get('/api/v1/group/validate/:passphrase/:userid', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    console.log('no current user')
+    return
+  }
+  await database('group').where('group_passphrase', request.params.passphrase).select()
+    .then(group => {
+      if (!group.length) {
+        return response.status(404).json({error: 'group passphrase not found'});
+      }
+      addUserGroup(request, response, group[0].group_id, request.params.userid);
+    });
+});
+
+const findUser = async (request, response, groupid) => {
+  await database('users').where('group_id', groupid).select()
     .then(user => {
       return response.status(200).json(user);
     })
@@ -165,6 +171,14 @@ function findUser(request, response, groupid) {
       return response.status(500).json({error: 'user not found'});
     });
 }
+
+
+
+
+
+
+
+
 
 
 app.get('/api/v1/events/:id/total', async (request, response) => {
@@ -282,3 +296,7 @@ function getGroup(request, response, groupId) {
 //       response.status(500).json({error: 'error adding user'});
 //     });
 // });
+
+
+
+/////NOTES:  ALWAYS VALIDATE ON AN API CALL!  AND send the JWT in the headers from the FE.  EVERY TIME!!!

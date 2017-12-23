@@ -10,14 +10,12 @@ const { KEYUTIL, KJUR, b64utoutf8 } = require('jsrsasign');
 const key = require('./pubKey');
 
 app.use(express.static(path.join(__dirname, 'public')));
-// app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
 
 const corsOptions = {
   allowedOrigins: ['localhost:3001'],
   preflightContinue: true,
-  headers: ['Content-Type', 'x-token', 'x-temp']
+  headers: ['Content-Type', 'x-token']
 };
 
 app.use(cors(corsOptions));
@@ -26,26 +24,26 @@ app.listen(3000, () => {
   console.log('database is running on localhost:3000');
 });
 
-validate = (request) => {
-  var jwToken = request.headers['x-token'];
-  var pubkey = KEYUTIL.getKey(key);
-  var isValid = KJUR.jws.JWS.verifyJWT(jwToken, pubkey, {alg: ['RS256']});
-  //if isValid is false, we should throw an error before trying payload
-  if (isValid) {
-    var payloadObj = KJUR.jws.JWS.readSafeJSONString(b64utoutf8(jwToken.split(".")[1]));
-    return payloadObj;
-  } else {
-    throw Error('problem with validating user - please signin again');
+validate = (request, response) => {
+  try {
+    var jwToken = request.headers['x-token'] || '';
+    var pubkey = KEYUTIL.getKey(key);
+    var isValid = KJUR.jws.JWS.verifyJWT(jwToken, pubkey, {alg: ['RS256']});
+    if (isValid) {
+      var payloadObj = KJUR.jws.JWS.readSafeJSONString(b64utoutf8(jwToken.split(".")[1]));
+      return payloadObj;
+    } 
+  } catch (e) {
+    console.log('i errored')
   }
-  //to get current user, take uid returned from validation and match with users.authrocketid
-  //if not found, create one
-  //then return current user
 
-  //this function needs to be run on every api call
+  console.log('invalid token')
+  
+  response.status(401).json({error: 'Invalid token.  Please login again.'})
 };
 
-app.get('/api/v1/login', (request,response) => {
-  const userObject = validate(request);
+const getCurrentUser =  async ( request, response ) => {
+  const userObject = validate(request, response);
   const newUser = {
     group_id: null,
     email: userObject.un,
@@ -53,29 +51,88 @@ app.get('/api/v1/login', (request,response) => {
     authrocket_id: userObject.uid
   };
 
-  console.log(newUser);
-
-  database('users').where('authrocket_id', userObject.uid).select()
+  let foundUser = null;
+  await database('users').where('authrocket_id', userObject.uid).select()
     .then((user) =>{
       if (!user.length) {
-        return createUser(request, response, newUser);
+        foundUser = createUser( response, newUser );
       }
-      response.status(200).json(user);
+      foundUser = user[0];
     })
-    .catch((error => {
-      response.status(404).json({error});
-    }));
-});
+    .catch(error => {
+      console.log('error loading user')
 
-const createUser = ( request, response, user ) => {
-  database('users').insert(user)
+      response.status(404).json({error});
+    });
+  return foundUser;
+}
+
+const createUser = async ( response, user ) => {
+  let foundUser;
+  await database('users').insert(user)
     .then( user => {
-      response.status(200).json({status: 'success'});
+      foundUser = user;
     })
     .catch( error => {
+      console.log('error creating user')
       response.status(500).json({error});
     });
+  return foundUser;
 };
+
+/////  GET CURRENT USER  /////////
+app.get('/api/v1/users', async (request, response) => { 
+  const currentUser = await getCurrentUser(request, response);
+  console.log(currentUser)
+  if (!currentUser) {
+    console.log('no current user')
+    return
+  }  //the first few lines should look the same for all calls
+
+  // if (currentUser.id !== request.params.id) {
+  //   response.status(403).json({error: 'forbidden'})
+  //   return
+  // }
+
+  database('users').where('user_id', currentUser.user_id).select()
+    .then((user) => {
+      response.status(200).json(user);
+    })
+    // .catch((error) => {
+    //   console.log('validationResponse: ', validationResponse);
+    //   // response.status(500).json({error: error})
+    // });
+});
+
+
+app.post('/api/v1/group/new', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response)
+  if (!currentUser) {
+    console.log('no current user')
+    return
+  }  //the first few lines should look the same for all calls
+
+  const group = request.body;
+
+  for(let requiredParameters of ['group_name', 'group_passphrase', 'weekly_points']) {
+    if(!group[requiredParameters]) {
+      return response
+        .status(422)
+        .send({ error: `missing parameter ${requiredParameters}`})
+    }
+  }  
+  group.administrator_id = currentUser.user_id;
+
+  database('group').insert(group, 'group_id')
+    .then(group => {
+      return getGroup(request, response, group[0])
+    })
+    .catch(error => {
+      response.status(500).json({error});
+    })
+});
+
+
 
 app.get('/api/v1/group/validate/:passphrase/:userid', (request, response) => {
 
@@ -109,19 +166,6 @@ function findUser(request, response, groupid) {
     });
 }
 
-app.get('/api/v1/users/:id', (request, response) => {
-  const userObject = validate(request);
-  console.log(userObject);
-
-  database('users').where('user_id', request.params.id).select()
-    .then((user) => {
-      response.status(200).json(user);
-    })
-    .catch((error) => {
-      console.log('validationResponse: ', validationResponse);
-      // response.status(500).json({error: error})
-    });
-});
 
 app.get('/api/v1/events/:id/total', async (request, response) => {
   console.log(request.params.id)
@@ -207,27 +251,7 @@ app.get('/api/v1/group/:id', (request, response) => {
     });
 });
 
-app.post('/api/v1/group/new', (request, response) => {
-  const group = request.body;
-  console.log(group)
-  console.log(request)
 
-  for(let requiredParameters of ['group_name', 'group_passphrase', 'weekly_points', 'administrator_id']) {
-    if(!group[requiredParameters]) {
-      return response
-        .status(422)
-        .send({ error: `missing parameter ${requiredParameters}`})
-    }
-  }  
-
-  database('group').insert(group, 'group_id')
-    .then(group => {
-      return getGroup(request, response, group[0])
-    })
-    .catch(error => {
-      response.status(500).json({error});
-    })
-});
 
 function getGroup(request, response, groupId) {
   database('group').where('group_id', groupId).select()

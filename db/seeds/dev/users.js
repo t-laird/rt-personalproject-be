@@ -32,13 +32,13 @@ let transactionData = [
     'point_value': 20},
   {
     'send_id': 2,
-    'receive_id': 1,
+    'receive_id': 3,
     'group_id': 789,
     'created_time': weeks.four,    
     'point_value': 5},
   {
     'send_id': 1,
-    'receive_id': 7,
+    'receive_id': 5,
     'group_id': 789,
     'created_time': weeks.one,   
     'point_value': 15},
@@ -52,18 +52,18 @@ let transactionData = [
     'send_id': 2,
     'receive_id': 1,
     'group_id': 789,
-    'created_time': weeks.once,
+    'created_time': weeks.one,
     
     'point_value': 10},
   {
     'send_id': 4,
-    'receive_id': 1,
+    'receive_id': 3,
     'group_id': 789,
     'created_time': weeks.three,    
     'point_value': 25},
   {
     'send_id': 5,
-    'receive_id': 1,
+    'receive_id': 3,
     'group_id': 789,
     'created_time': weeks.one,    
     'point_value': 20}

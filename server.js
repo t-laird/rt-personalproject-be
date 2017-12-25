@@ -308,9 +308,8 @@ function getGroup(request, response, groupId) {
 //query for user events
 app.post('/api/v1/events/getuserdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
-  //attempt at using the changes you added, look right?
+  //attempt at validating user.. look right Rob?
   if (!currentUser) {
-    console.log('no current user')
     return
   }
 
@@ -334,18 +333,16 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
   };
   //call previous function
   let earliestSunday = findSunday(userCreated, userId);
-  let dateCollection = {};
+  let dateCollection = [];
   let weekCounter = 1;
-
-    console.log('current date', currentDate);
   
   while(earliestSunday < currentDate) {
     let sentTransactions = await getSentTransactions(earliestSunday, userId);
     let receivedTransactions = await getReceivedTransactions(earliestSunday, userId);
+
     weekCounter++;
-    console.log('sunday counter', earliestSunday)
     earliestSunday += (1000 * 60 * 60 * 24 * 7);
-    dateCollection[`week${weekCounter}`] = {sent: sentTransactions, received: receivedTransactions};
+    dateCollection = [...dateCollection, {sent: sentTransactions, received: receivedTransactions}];
   }
 
   response.status(200).json(dateCollection);
@@ -360,9 +357,7 @@ const getReceivedTransactions = (start, userid) => {
 }
 
 const getSentTransactions = (start, userid) => {
-  console.log('starttime : ', start);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
-  console.log('endtime : ', endTime);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where('send_id', userid).select()
   .then(userEvents => {
     return userEvents;

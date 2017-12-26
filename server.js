@@ -206,15 +206,15 @@ app.get('/api/v1/events', (request, response) => {
     })
 });
 
-app.get('/api/v1/users', (request, response) => {
-  database('users').select()
-    .then((user) => {
-      response.status(200).json(user)
-    })
-    .catch((error) => {
-      response.status(500).json({error});
-    })
-});
+// app.get('/api/v1/users', (request, response) => {
+//   database('users').select()
+//     .then((user) => {
+//       response.status(200).json(user)
+//     })
+//     .catch((error) => {
+//       response.status(500).json({error});
+//     })
+// });
 
 // app.get('/api/v1/users/:id', (request, response) => {
 //   database('users').where('user_id', request.params.id).select()
@@ -228,6 +228,7 @@ app.get('/api/v1/users', (request, response) => {
 
 
 app.post('/api/v1/eventtracking/new', (request, response) => {
+  
   const event = request.body;
   event.created_time = Date.now();
 
@@ -316,7 +317,7 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
   //get start date and the date user created their account
   const { user } = request.body;
   const currentDate = Date.now();
-  const userCreated = user.created_time;
+  const userCreated = user.created_date;
   const userId = user.user_id;
 
 
@@ -335,7 +336,6 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
   let earliestSunday = findSunday(userCreated, userId);
   let dateCollection = [];
   let weekCounter = 1;
-  
   while(earliestSunday < currentDate) {
     let sentTransactions = await getSentTransactions(earliestSunday, userId);
     let receivedTransactions = await getReceivedTransactions(earliestSunday, userId);
@@ -363,3 +363,23 @@ const getSentTransactions = (start, userid) => {
     return userEvents;
   });
 }
+
+
+app.get('/api/v1/users/group/:groupid/', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+
+  if (request.params.groupid === null) {
+    return response.status(404).json({error: 'user not in a group.. join to see users in your network'});
+  }
+  
+  database('users').where('group_id', request.params.groupid).select()
+    .then((users) => {
+      response.status(200).json(users);
+    })
+    .catch(error => {
+      response.status(500).json({error: 'error retrieving users'});
+    });
+});

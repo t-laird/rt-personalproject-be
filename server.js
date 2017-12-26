@@ -259,7 +259,12 @@ app.get('/api/v1/group', (request, response) => {
     });
 });
 
-app.get('/api/v1/group/:id', (request, response) => {
+app.get('/api/v1/group/:id', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+
   database('group').where('group_id', request.params.id).select()
     .then((group) => {
       response.status(200).json(group)
@@ -364,7 +369,7 @@ const getSentTransactions = (start, userid) => {
   });
 }
 
-
+//find users in group network
 app.get('/api/v1/users/group/:groupid/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {

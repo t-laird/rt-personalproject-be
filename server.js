@@ -8,6 +8,8 @@ const configuration = require('./knexfile')[environment];
 const database = require('knex')(configuration);
 const { KEYUTIL, KJUR, b64utoutf8 } = require('jsrsasign');
 const key = require('./pubKey');
+var pg = require('pg')
+pg.types.setTypeParser(20, 'text', parseInt)
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
@@ -227,6 +229,7 @@ app.get('/api/v1/users', (request, response) => {
 
 app.post('/api/v1/eventtracking/new', (request, response) => {
   const event = request.body;
+  event.created_time = Date.now();
 
   for(let requiredParameters of ['send_id', 'receive_id', 'group_id', 'point_value']) {
     if(!event[requiredParameters]) {
@@ -299,4 +302,64 @@ function getGroup(request, response, groupId) {
 
 
 
-/////NOTES:  ALWAYS VALIDATE ON AN API CALL!  AND send the JWT in the headers from the FE.  EVERY TIME!!!
+/////NOTES:  ALWAYS VALIDATE ON AN API CALL!  AND send the JWT in the headers from the FE.  EVERY TIME!!! - HELL YEAH
+
+
+//query for user events
+app.post('/api/v1/events/getuserdata/', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  //attempt at validating user.. look right Rob?
+  if (!currentUser) {
+    return
+  }
+
+  //get start date and the date user created their account
+  const { user } = request.body;
+  const currentDate = Date.now();
+  const userCreated = user.created_time;
+  const userId = user.user_id;
+
+
+  //find the first sunday (@ midnight mountain time)
+  const findSunday = (start) => {
+    const dateMilliseconds = Date.parse(start);
+    const dateString = new Date(dateMilliseconds);
+    const dayOfWeek = dateString.getDay();
+    const subtractDays = dayOfWeek * 1000 * 60 * 60 * 24;
+    const subtractToSunday = dateMilliseconds - subtractDays;
+    const newDateString = new Date(subtractToSunday);
+    const resetTime = newDateString.setHours(23, 59);
+    return resetTime;
+  };
+  //call previous function
+  let earliestSunday = findSunday(userCreated, userId);
+  let dateCollection = [];
+  let weekCounter = 1;
+  
+  while(earliestSunday < currentDate) {
+    let sentTransactions = await getSentTransactions(earliestSunday, userId);
+    let receivedTransactions = await getReceivedTransactions(earliestSunday, userId);
+
+    weekCounter++;
+    earliestSunday += (1000 * 60 * 60 * 24 * 7);
+    dateCollection = [...dateCollection, {sent: sentTransactions, received: receivedTransactions}];
+  }
+
+  response.status(200).json(dateCollection);
+});
+
+const getReceivedTransactions = (start, userid) => {
+  const endTime = start + (1000 * 60 * 60 * 24 * 7);
+  return database('eventtracking').whereBetween('created_time', [start, endTime]).where('receive_id', userid).select()
+  .then(userEvents => {
+    return userEvents;
+  });
+}
+
+const getSentTransactions = (start, userid) => {
+  const endTime = start + (1000 * 60 * 60 * 24 * 7);
+  return database('eventtracking').whereBetween('created_time', [start, endTime]).where('send_id', userid).select()
+  .then(userEvents => {
+    return userEvents;
+  });
+}

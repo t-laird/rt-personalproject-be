@@ -9,7 +9,9 @@ const database = require('knex')(configuration);
 const { KEYUTIL, KJUR, b64utoutf8 } = require('jsrsasign');
 const key = require('./pubKey');
 var pg = require('pg')
-pg.types.setTypeParser(20, 'text', parseInt)
+pg.types.setTypeParser(20, 'text', parseInt);
+
+const { findSunday } =  require('./helpers');
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
@@ -322,28 +324,15 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
   //get start date and the date user created their account
   const { user } = request.body;
   const currentDate = Date.now();
-  const userCreated = user.created_date;
-  const userId = user.user_id;
 
+  const { created_date, user_id } = user;
 
-  //find the first sunday (@ midnight mountain time)
-  const findSunday = (start) => {
-    const dateMilliseconds = Date.parse(start);
-    const dateString = new Date(dateMilliseconds);
-    const dayOfWeek = dateString.getDay();
-    const subtractDays = dayOfWeek * 1000 * 60 * 60 * 24;
-    const subtractToSunday = dateMilliseconds - subtractDays;
-    const newDateString = new Date(subtractToSunday);
-    const resetTime = newDateString.setHours(23, 59);
-    return resetTime;
-  };
-  //call previous function
-  let earliestSunday = findSunday(userCreated, userId);
+  let earliestSunday = findSunday(created_date);
   let dateCollection = [];
   let weekCounter = 1;
   while(earliestSunday < currentDate) {
-    let sentTransactions = await getSentTransactions(earliestSunday, userId);
-    let receivedTransactions = await getReceivedTransactions(earliestSunday, userId);
+    let sentTransactions = await getTransactions(earliestSunday, user_id, 'send_id');
+    let receivedTransactions = await getTransactions(earliestSunday, user_id, 'receive_id');
 
     weekCounter++;
     earliestSunday += (1000 * 60 * 60 * 24 * 7);
@@ -352,22 +341,6 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
 
   response.status(200).json(dateCollection);
 });
-
-const getReceivedTransactions = (start, userid) => {
-  const endTime = start + (1000 * 60 * 60 * 24 * 7);
-  return database('eventtracking').whereBetween('created_time', [start, endTime]).where('receive_id', userid).select()
-  .then(userEvents => {
-    return userEvents;
-  });
-}
-
-const getSentTransactions = (start, userid) => {
-  const endTime = start + (1000 * 60 * 60 * 24 * 7);
-  return database('eventtracking').whereBetween('created_time', [start, endTime]).where('send_id', userid).select()
-  .then(userEvents => {
-    return userEvents;
-  });
-}
 
 //find users in group network
 app.get('/api/v1/users/group/:groupid/', async (request, response) => {
@@ -388,3 +361,37 @@ app.get('/api/v1/users/group/:groupid/', async (request, response) => {
       response.status(500).json({error: 'error retrieving users'});
     });
 });
+
+app.get('/api/v1/events/getgroupdata/', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+
+  const { group } = request.body;
+  const currentDate = Date.now();
+
+  const { created_date, group_id } = user;
+
+  let earliestSunday = findSunday(created_date);
+  let dateCollection = [];
+  let weekCounter = 1;
+
+  while(earliestSunday < currentDate) {
+    let transactions = await getTransactions(earliestSunday, group_id, 'group_id');
+
+    weekCounter++;
+    earliestSunday += (1000 * 60 * 60 * 24 * 7);
+    dateCollection = [...dateCollection, {transactions: transactions}];
+  }
+
+  response.status(200).json(dateCollection);
+});
+
+const getTransactions = (start, id, criteria) => {
+  const endTime = start + (1000 * 60 * 60 * 24 * 7);
+  return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
+  .then(userEvents => {
+    return userEvents;
+  });
+}

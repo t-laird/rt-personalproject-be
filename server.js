@@ -6,11 +6,12 @@ const path = require('path');
 const environment = process.env.NODE_ENV || 'development';
 const configuration = require('./knexfile')[environment];
 const database = require('knex')(configuration);
+const moment = require('moment');
 const { KEYUTIL, KJUR, b64utoutf8 } = require('jsrsasign');
 const key = require('./pubKey');
 var pg = require('pg')
-pg.types.setTypeParser(20, 'text', parseInt);
 
+pg.types.setTypeParser(20, 'text', parseInt);
 const { findSunday } =  require('./helpers');
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -93,19 +94,10 @@ app.get('/api/v1/users', async (request, response) => {
     return
   }  //the first few lines should look the same for all calls
 
-  // if (currentUser.id !== request.params.id) {
-  //   response.status(403).json({error: 'forbidden'})
-  //   return
-  // }
-
   database('users').where('user_id', currentUser.user_id).select()
     .then((user) => {
       response.status(200).json(user);
     })
-    // .catch((error) => {
-    //   console.log('validationResponse: ', validationResponse);
-    //   // response.status(500).json({error: error})
-    // });
 });
 
 
@@ -326,8 +318,9 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
   const currentDate = Date.now();
 
   const { created_date, user_id } = user;
+  const adjDate = moment(created_date).subtract(7, 'days')
 
-  let earliestSunday = findSunday(created_date);
+  let earliestSunday = findSunday(adjDate);
   let dateCollection = [];
   let weekCounter = 1;
   while(earliestSunday < currentDate) {

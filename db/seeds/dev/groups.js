@@ -3,7 +3,7 @@ let groupData = [
     group_name: 'turing',
     group_passphrase: '9139z',
     weekly_points: 100,
-    administrator_id: 123,
+    administrator_id: 8,
   },
   {
     group_name: 'facebook',

@@ -3,7 +3,12 @@ const weeks =
     two:   1512868287190,
     three: 1512263487190,
     four:  1511658687190,
-    five:  1511053887190 };
+    five:  1511053887190,
+    six:   1510449087190,
+    seven: 1509844287190,
+    eight: 1509239487190,
+    nine:  1508634687190,
+    ten:   1508029887190 };
 
 let transactionData = [
   {
@@ -31,6 +36,42 @@ let transactionData = [
     'created_time': weeks.three,    
     'point_value': 20},
   {
+    'send_id': 2,
+    'receive_id': 4,
+    'group_id': 1,
+    'created_time': weeks.one, 
+    'point_value': 15},
+  {
+    'send_id': 1,
+    'receive_id': 6,
+    'group_id': 1,
+    'created_time': weeks.two, 
+    'point_value': 5},
+  {
+    'send_id': 4,
+    'receive_id': 2,
+    'group_id': 1,
+    'created_time': weeks.eight,
+    'point_value': 15},
+  {
+    'send_id': 5,
+    'receive_id': 6,
+    'group_id': 1,
+    'created_time': weeks.nine,
+    'point_value': 10},
+  {
+    'send_id': 3,
+    'receive_id': 1,
+    'group_id': 1,
+    'created_time': weeks.ten,
+    'point_value': 5},
+  {
+    'send_id': 6,
+    'receive_id': 2,
+    'group_id': 1,
+    'created_time': weeks.three, 
+    'point_value': 5},
+  {
     'send_id': 8,
     'receive_id': 3,
     'group_id': 1,
@@ -43,11 +84,35 @@ let transactionData = [
     'created_time': weeks.one,   
     'point_value': 15},
   {
+    'send_id': 6,
+    'receive_id': 2,
+    'group_id': 1,
+    'created_time': weeks.four, 
+    'point_value': 10},
+  {
     'send_id': 8,
     'receive_id': 3,
     'group_id': 1,
     'created_time': weeks.five,    
     'point_value': 10},
+  {
+    'send_id': 3,
+    'receive_id': 1,
+    'group_id': 1,
+    'created_time': weeks.four, 
+    'point_value': 5},
+  {
+    'send_id': 2,
+    'receive_id': 3,
+    'group_id': 1,
+    'created_time': weeks.three, 
+    'point_value': 15},
+  {
+    'send_id': 5,
+    'receive_id': 4,
+    'group_id': 1,
+    'created_time': weeks.eight, 
+    'point_value': 5},
   {
     'send_id': 8,
     'receive_id': 1,
@@ -61,11 +126,23 @@ let transactionData = [
     'created_time': weeks.three,    
     'point_value': 25},
   {
+    'send_id': 1,
+    'receive_id': 5,
+    'group_id': 1,
+    'created_time': weeks.five, 
+    'point_value': 20},
+  {
     'send_id': 5,
     'receive_id': 8,
     'group_id': 1,
-    'created_time': weeks.one,    
+    'created_time': weeks.four,    
     'point_value': 20},
+  {
+    'send_id': 4,
+    'receive_id': 5,
+    'group_id': 1,
+    'created_time': weeks.nine, 
+    'point_value': 25},
   {
     'send_id': 8,
     'receive_id': 1,
@@ -73,11 +150,23 @@ let transactionData = [
     'created_time': weeks.five,    
     'point_value': 20},
   {
+    'send_id': 2,
+    'receive_id': 6,
+    'group_id': 1,
+    'created_time': weeks.ten,
+    'point_value': 10},
+  {
     'send_id': 1,
     'receive_id': 8,
     'group_id': 1,
     'created_time': weeks.two,
     'point_value': 10},
+  {
+    'send_id': 5,
+    'receive_id': 3,
+    'group_id': 1,
+    'created_time': weeks.six,
+    'point_value': 35},
   {
     'send_id': 8,
     'receive_id': 3,
@@ -90,6 +179,24 @@ let transactionData = [
     'group_id': 1,
     'created_time': weeks.two,    
     'point_value': 15},
+  {
+    'send_id': 4,
+    'receive_id': 3,
+    'group_id': 1,
+    'created_time': weeks.one, 
+    'point_value': 10},
+  {
+    'send_id': 1,
+    'receive_id': 3,
+    'group_id': 1,
+    'created_time': weeks.two, 
+    'point_value': 10},
+  {
+    'send_id': 5,
+    'receive_id': 2,
+    'group_id': 1,
+    'created_time': weeks.five, 
+    'point_value': 20},
   {
     'send_id': 5,
     'receive_id': 8,
@@ -106,13 +213,13 @@ let transactionData = [
     'send_id': 4,
     'receive_id': 8,
     'group_id': 1,
-    'created_time': weeks.three,    
+    'created_time': weeks.six,    
     'point_value': 25},
   {
     'send_id': 8,
     'receive_id': 1,
     'group_id': 1,
-    'created_time': weeks.four,    
+    'created_time': weeks.seven,    
     'point_value': 20}
 ];
 

@@ -221,8 +221,12 @@ app.get('/api/v1/events', (request, response) => {
 // });
 
 
-app.post('/api/v1/eventtracking/new', (request, response) => {
-  
+app.post('/api/v1/eventtracking/new', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+
   const event = request.body;
   event.created_time = Date.now();
 
@@ -234,12 +238,61 @@ app.post('/api/v1/eventtracking/new', (request, response) => {
     }
   }
 
+  let getSendingUser = null;  
+  let getReceivingUser = null;
+  let groupSettings = null;
+  const lastSunday = findSunday(new Date(Date.now()));
+  let getRecentTransactions = null;
+
+  await database('users').where('user_id', event.send_id).select()
+    .then((user) => {
+      getSendingUser = user[0];
+    })
+
+  await database('users').where('user_id', event.receive_id).select()
+    .then((user) => {
+      getReceivingUser = user[0];
+    })
+
+  await database('group').where('group_id', event.group_id).select()
+    .then((group) => {
+      groupSettings = group[0];
+    })
+
+    getRecentTransactions = await getTransactions(lastSunday, event.send_id, 'send_id');
+
+    const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
+      total += transaction.point_value;
+      return total;
+    }, 0);
+
+
+    // console.log('sending user is ', getSendingUser);
+    // console.log('Receiving user is ', getReceivingUser);
+    // console.log('Receiving group is ', groupSettings);
+    // console.log('Last sunday is ', lastSunday);
+    // console.log('Recent transactions are ', getRecentTransactions);
+    // console.log('total transactions is ', sumRecentSentTransactions);
+  
+  if (!getReceivingUser || !getSendingUser) {
+    return response.status(450).json({status: 'failure', error: 'Receiving user not found.'});
+  } else if (getReceivingUser.group_id !== getSendingUser.group_id) {
+    return response.status(450).json({status: 'failure', error: 'The receiving user is not in your group!'});
+  } else if (!groupSettings) {
+    return response.status(450).json({status: 'failure', error: 'You are not in a valid group.'});
+  } else if ((sumRecentSentTransactions + event.point_value) > groupSettings.weekly_points) {
+    const remainingPoints = groupSettings.weekly_points - sumRecentSentTransactions;
+    return response.status(450).json({status: 'failure', error: `Transaction could not be completed. Your remaining point balance is ${remainingPoints}.`});
+  }
+
+  console.log(event);
+
   database('eventtracking').insert(event, 'event_id')
     .then(event => {
-      response.status(200).json({status: 'success'});
+      response.status(200).json({status: 'success', event: event[0]});
     })
     .catch(error => {
-      response.status(500).json({error});
+      response.status(500).json({status: 'failure', error});
     })
 });
 
@@ -383,6 +436,7 @@ app.post('/api/v1/events/getgroupdata/', async (request, response) => {
 });
 
 const getTransactions = (start, id, criteria) => {
+  console.log(start, id, criteria);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
   .then(userEvents => {

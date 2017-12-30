@@ -355,7 +355,7 @@ app.get('/api/v1/users/group/:groupid/', async (request, response) => {
     });
 });
 
-app.get('/api/v1/events/getgroupdata/', async (request, response) => {
+app.post('/api/v1/events/getgroupdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
     return
@@ -364,9 +364,10 @@ app.get('/api/v1/events/getgroupdata/', async (request, response) => {
   const { group } = request.body;
   const currentDate = Date.now();
 
-  const { created_date, group_id } = user;
+  const { created_date, group_id } = group;
+  const adjDate = moment(created_date).subtract(7, 'days')
 
-  let earliestSunday = findSunday(created_date);
+  let earliestSunday = findSunday(adjDate);
   let dateCollection = [];
   let weekCounter = 1;
 

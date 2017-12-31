@@ -443,3 +443,5 @@ const getTransactions = (start, id, criteria) => {
     return userEvents;
   });
 }
+
+module.exports = app;

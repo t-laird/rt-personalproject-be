@@ -285,6 +285,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
     return response.status(450).json({status: 'failure', error: `Transaction could not be completed. Your remaining point balance is ${remainingPoints}.`});
   }
 
+  event.send_name = getSendingUser.name;
   console.log(event);
 
   database('eventtracking').insert(event, 'event_id')

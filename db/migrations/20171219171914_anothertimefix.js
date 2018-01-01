@@ -7,6 +7,8 @@ exports.up = function(knex, Promise) {
     table.integer('receive_id');
     table.integer('group_id');
     table.integer('point_value');
+    table.text('send_name');
+    table.text('note');
   });
 };
 

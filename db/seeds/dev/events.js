@@ -49,10 +49,13 @@ let transactionData = [
     'point_value': 5},
   {
     'send_id': 4,
-    'receive_id': 2,
+    'receive_id': 8,
     'group_id': 1,
     'created_time': weeks.eight,
-    'point_value': 15},
+    'point_value': 15,
+    'send_name': 'Joe Montana',
+    'note': 'Thanks for your help with JS array prototypes.  You totally crushed it!'
+  },
   {
     'send_id': 5,
     'receive_id': 6,
@@ -82,7 +85,10 @@ let transactionData = [
     'receive_id': 8,
     'group_id': 1,
     'created_time': weeks.one,   
-    'point_value': 15},
+    'point_value': 15,
+    'send_name': 'Jerry Rice',
+    'note': 'You totally killed it on your lightning talk this morning!  I loved it.'
+  },
   {
     'send_id': 6,
     'receive_id': 2,
@@ -229,7 +235,9 @@ const createEvent = (knex, event) => {
     receive_id: event.receive_id,
     group_id: event.group_id,
     created_time: event.created_time,
-    point_value: event.point_value
+    point_value: event.point_value,
+    send_name: event.send_name,
+    note: event.note
   }, 'event_id');
 };
 

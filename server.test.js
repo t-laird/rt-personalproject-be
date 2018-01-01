@@ -3,7 +3,7 @@ const chai  = require('chai');
     chaiHttp = require('chai-http');
     server = require('./server');
     should = chai.should();
-    xToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImpreV8wdlhXRGRqMURGY0xtSUdiUGhCTDRIIn0.eyJpYXQiOjE1MTQ2OTQ2NTQsImV4cCI6MTUxNDcxNjI1NCwidWlkIjoidXNyXzB2WFhGckFtcGpTV1hucjduMngybTgiLCJ1biI6InQ2cjZsNUBnbWFpbC5jb20iLCJmbiI6IlRob21hcyIsImxuIjoiTGFpcmQiLCJuIjoiVGhvbWFzIExhaXJkIiwidGsiOiJrc3NfMHZYa1BwS1F3UFdrT0VpS2NVZmxEZCJ9.lm4tX9hdErNXETphe7WoTCxoephJYNL3G_21pZz1YWW1RIbiLgjJg-benQu4-k_LSn6cyaguTd6zXPNl-ihhEJhoJK7K6XVydXikat7KB9d9A4TjQd1_rUocZDsrLOEoRkNI8DQWL9FcsXJpYfwNK8wHxcgTzpOQpA4hl2IkpI7S2SSo55qNT7Vs-0mjYlpmjtawhSac2BVjUxwzSUXa2H9loLmKjl0SqG2uDaJZVUvVoF2fxlLl1Ejnpb9BYcGSROCB9lorDTsujc8WNrm0pJHwEBjic8q5vfxhUiZTDMed4KjqvQT9iLl0gQw48ND2MHcnf15rM8OcljXNS3kWUg";
+    xToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImpreV8wdlhXRGRqMURGY0xtSUdiUGhCTDRIIn0.eyJpYXQiOjE1MTQ3NjY0MzYsImV4cCI6MTUxNDc4ODAzNiwidWlkIjoidXNyXzB2WFhGckFtcGpTV1hucjduMngybTgiLCJ1biI6InQ2cjZsNUBnbWFpbC5jb20iLCJmbiI6IlRob21hcyIsImxuIjoiTGFpcmQiLCJuIjoiVGhvbWFzIExhaXJkIiwidGsiOiJrc3NfMHZYbFpWVUtFUWVCOWNWNmViSlMweiJ9.rWS5OBxyKvBcbWFwq40KGSf-6FjXDCSl4VShIszpbi-jZI5oR3gqcreOmggiJvnB6VXXJAaVugcyIfLuXQlkQ3HhKlwZU26SYe1mJeszg1TRf_yPKERaJQVuh7PO2Dt0x0NAnZOFErsn1iajmQBPLkxEDchqmPmkX-Zer9Ra2th_Lu8-TlYFbGuQgtsq6hB180tGFpeIJE_SkuWV3WdTPicqS83k8EIKedbJjGIAu0gpoR50rUiSt_H_Q6GsE6Iq-mGoqdNc_XfPbYNfqzdlxt5IfhxhL72AyBBzubIHueJqBw1y4QzF7QqL8n-XF0hHJuyvzSFUT5cpDVvwL2pbsQ";
   
 chai.use(chaiHttp);
 
@@ -142,6 +142,57 @@ describe('user routes', () => {
   
   
   describe('groups routes', () => {
-    
+    it('should create a new group', () => {
+      return chai.request(server)
+      .post('/api/v1/group/new')
+      .set('x-token', xToken)      
+      .send(
+        {group_name: 'test-group', group_passphrase: 'hello', weekly_points: 100}
+      )
+      .then(response => {
+        response.should.have.status(200);
+        response.body[0].should.have.property('group_id');
+        response.body[0].should.have.property('group_passphrase');
+        response.body[0].should.have.property('weekly_points');
+        response.body[0].should.have.property('administrator_id');
+        response.body[0].should.have.property('created_date');
+        response.body[0].should.have.property('group_name');
+      });
+    });
+
+    it('should validate a group when attempting to join', () => {
+      return chai.request(server)
+      .get('/api/v1/group/validate/19vns/65')
+      .set('x-token', xToken)
+      .then(response => {
+        response.should.have.status(200);
+        response.body[0].should.have.property('user_id');
+        response.body[0].should.have.property('created_date');
+        response.body[0].should.have.property('group_id');
+        response.body[0].should.have.property('email');
+        response.body[0].should.have.property('name');
+        response.body[0].should.have.property('authrocket_id');
+        response.body[0].group_id.should.deep.equal(31);
+      });
+    });
+
+    it('should return a specific group given a group id', () => {
+      return chai.request(server)
+      .get('/api/v1/group/31')
+      .set('x-token', xToken)
+      .then(response => {
+        response.should.have.status(200)
+        response.body[0].should.have.property('group_id');
+        response.body[0].should.have.property('group_passphrase');
+        response.body[0].should.have.property('weekly_points');
+        response.body[0].should.have.property('administrator_id');
+        response.body[0].should.have.property('created_date');
+        response.body[0].should.have.property('group_name');
+      });
+    });
   });
+
+  describe('validation tests', () => {
+    
+  })
   

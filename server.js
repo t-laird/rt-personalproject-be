@@ -65,7 +65,7 @@ const getCurrentUser =  async ( request, response ) => {
       foundUser = user[0];
     })
     .catch(error => {
-      console.log('error loading user')
+      console.log('error loading user');
 
       response.status(404).json({error});
     });
@@ -79,7 +79,6 @@ const createUser = async ( response, user ) => {
       foundUser = user;
     })
     .catch( error => {
-      console.log('error creating user')
       response.status(500).json({error});
     });
   return foundUser;
@@ -154,7 +153,7 @@ app.get('/api/v1/group/validate/:passphrase/:userid', async (request, response) 
       if (!group.length) {
         return response.status(404).json({error: 'group passphrase not found'});
       }
-      addUserGroup(request, response, group[0].group_id, request.params.userid);
+      return addUserGroup(request, response, group[0].group_id, request.params.userid);
     });
 });
 
@@ -395,8 +394,7 @@ app.get('/api/v1/users/group/:groupid/', async (request, response) => {
   if (!currentUser) {
     return
   }
-
-  if (request.params.groupid === null) {
+  if (request.params.groupid === 'null') {
     return response.status(404).json({error: 'user not in a group.. join to see users in your network'});
   }
   

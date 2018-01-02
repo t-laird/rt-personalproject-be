@@ -36,7 +36,6 @@ const validate = (request, response) => {
     var jwToken = request.headers['x-token'] !== 'null' ? request.headers['x-token'] : '';
     var pubkey = KEYUTIL.getKey(key);
     var isValid = KJUR.jws.JWS.verifyJWT(jwToken, pubkey, {alg: ['RS256']});
-    console.log('the jwtoken is valid? ', isValid);
     if (isValid) {
       var payloadObj = KJUR.jws.JWS.readSafeJSONString(b64utoutf8(jwToken.split(".")[1]));
       return payloadObj;
@@ -49,7 +48,6 @@ const validate = (request, response) => {
 
 const getCurrentUser =  async ( request, response ) => {
   const userObject = await validate(request, response);
-  console.log(userObject, 'user object is here');
   const newUser = {
     group_id: null,
     email: userObject.un,

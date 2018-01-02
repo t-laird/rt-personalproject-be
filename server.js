@@ -178,7 +178,7 @@ const findUser = async (request, response, groupid) => {
 
 
 app.get('/api/v1/events/:id/total', async (request, response) => {
-  console.log(request.params.id)
+  // console.log(request.params.id)
   let total_points = await database('eventtracking').where('send_id', request.params.id).where('receive_id', 89234).select().sum('point_value')
     .then((user) => {
       // response.status(200).json(user)
@@ -286,7 +286,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
   }
 
   event.send_name = getSendingUser.name;
-  console.log(event);
+  // console.log(event);
 
   database('eventtracking').insert(event, 'event_id')
     .then(event => {
@@ -437,7 +437,7 @@ app.post('/api/v1/events/getgroupdata/', async (request, response) => {
 });
 
 const getTransactions = (start, id, criteria) => {
-  console.log(start, id, criteria);
+  // console.log(start, id, criteria);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
   .then(userEvents => {

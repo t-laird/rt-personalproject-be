@@ -4,24 +4,28 @@ let groupData = [
     group_passphrase: '9139z',
     weekly_points: 100,
     administrator_id: 8,
+    group_id: 1
   },
   {
     group_name: 'facebook',
     group_passphrase: '19vns',
     weekly_points: 1000,
-    administrator_id: 957,
+    administrator_id: 27,
+    group_id: 4
   },
   {
     group_name: 'twitter',
     group_passphrase: '19cix',
     weekly_points: 100,
-    administrator_id: 957,
+    administrator_id: 403,
+    group_id: 5
   },
   {
     group_name: 'google',
     group_passphrase: '31uza',
     weekly_points: 100,
     administrator_id: 957,
+    group_id: 9
   },
 ];                                    
 

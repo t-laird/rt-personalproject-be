@@ -31,24 +31,25 @@ app.listen(3000, () => {
 
 
 //////  VALIDATAION ////////
-validate = (request, response) => {
+const validate = (request, response) => {
   try {
-    var jwToken = request.headers['x-token'] || '';
+    var jwToken = request.headers['x-token'] !== 'null' ? request.headers['x-token'] : '';
     var pubkey = KEYUTIL.getKey(key);
     var isValid = KJUR.jws.JWS.verifyJWT(jwToken, pubkey, {alg: ['RS256']});
+    console.log('the jwtoken is valid? ', isValid);
     if (isValid) {
       var payloadObj = KJUR.jws.JWS.readSafeJSONString(b64utoutf8(jwToken.split(".")[1]));
       return payloadObj;
-    } 
+    }
   } catch (e) {
     console.log('i errored')
+    response.status(401).json({error: 'Invalid token.  Please login again.'});
   }
-  console.log('invalid token')
-  response.status(401).json({error: 'Invalid token.  Please login again.'})
 };
 
 const getCurrentUser =  async ( request, response ) => {
-  const userObject = validate(request, response);
+  const userObject = await validate(request, response);
+  console.log(userObject, 'user object is here');
   const newUser = {
     group_id: null,
     email: userObject.un,
@@ -285,6 +286,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
   }
 
   event.send_name = getSendingUser.name;
+  event.received_name = getReceivingUser.name;
   // console.log(event);
 
   database('eventtracking').insert(event, 'event_id')

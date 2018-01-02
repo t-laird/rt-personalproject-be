@@ -31,7 +31,7 @@ let groupData = [
 
 const createGroup = ( knex, group ) => {
   return knex('group').insert({
-    group_name: group.name,
+    group_name: group.group_name,
     group_passphrase: group.group_passphrase,
     weekly_points: group.weekly_points,
     administrator_id: group.administrator_id

@@ -24,8 +24,10 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.set('port', process.env.PORT || 3000);
 
-app.listen(3000, () => {
+
+app.listen(app.get('port'), () => {
   console.log('database is running on localhost:3000');
 });
 
@@ -344,5 +346,16 @@ app.get('/api/v1/events', (request, response) => {
       response.status(500).json({error});
     })
 });
+
+const getTransactions = (start, id, criteria) => {
+  console.log('start: ', start, 'id :', id, 'criteria: ', criteria);
+  console.log(typeof id);
+  const endTime = start + (1000 * 60 * 60 * 24 * 7);
+  return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
+  .then(userEvents => {
+    console.log('with found events: ', userEvents);
+    return userEvents;
+  });
+}
 
 module.exports = app;

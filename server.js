@@ -437,9 +437,12 @@ app.post('/api/v1/events/getgroupdata/', async (request, response) => {
 
 const getTransactions = (start, id, criteria) => {
   // console.log(start, id, criteria);
+  console.log('start: ', start, 'id :', id, 'criteria: ', criteria);
+  console.log(typeof id);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
   .then(userEvents => {
+    console.log('with found events: ', userEvents);
     return userEvents;
   });
 }

@@ -24,8 +24,10 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.set('port', process.env.PORT || 3000);
 
-app.listen(3000, () => {
+
+app.listen(app.get('port'), () => {
   console.log('database is running on localhost:3000');
 });
 

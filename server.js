@@ -33,6 +33,7 @@ app.listen(app.get('port'), () => {
 
 
 //////  VALIDATAION ////////
+
 const validate = (request, response) => {
   try {
     var jwToken = request.headers['x-token'] !== 'null' ? request.headers['x-token'] : '';
@@ -43,10 +44,12 @@ const validate = (request, response) => {
       return payloadObj;
     }
   } catch (e) {
-    console.log('i errored')
     response.status(401).json({error: 'Invalid token.  Please login again.'});
   }
 };
+
+
+//USER API FETCHES
 
 const getCurrentUser =  async ( request, response ) => {
   const userObject = await validate(request, response);
@@ -67,8 +70,6 @@ const getCurrentUser =  async ( request, response ) => {
       }
     })
     .catch(error => {
-      console.log('error loading user');
-
       response.status(404).json({error});
     });
   return foundUser;
@@ -83,17 +84,14 @@ const createUser = async ( response, user ) => {
     .catch( error => {
       response.status(500).json({error});
     });
-  console.log('found user in create user is ', foundUser);
   return foundUser;
 };
 
-/////  GET CURRENT USER  /////////
 app.get('/api/v1/users', async (request, response) => { 
   const currentUser = await getCurrentUser(request, response);
-  console.log(currentUser)
   if (!currentUser) {
     return
-  }  //the first few lines should look the same for all calls
+  }
 
   database('users').where('authrocket_id', currentUser.authrocket_id).select()
     .then((user) => {
@@ -101,12 +99,87 @@ app.get('/api/v1/users', async (request, response) => {
     })
 });
 
+//GROUP API FETCHES
+app.get('/api/v1/users/group/:groupid/', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+  if (request.params.groupid === 'null') {
+    return response.status(404).json({error: 'user not in a group.. join to see users in your network'});
+  }
+  
+  database('users').where('group_id', request.params.groupid).select()
+    .then((users) => {
+      response.status(200).json(users);
+    })
+    .catch(error => {
+      response.status(500).json({error: 'error retrieving users'});
+    });
+});
 
-////////  CREATE NEW GROUP /////////
+app.get('/api/v1/group', (request, response) => {
+  database('group').select()
+    .then((group) => {
+      response.status(200).json(group);
+    })
+    .catch(error => {
+      response.status(500).json({error})
+    });
+});
+
+app.get('/api/v1/group/:id', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+
+  database('group').where('group_id', request.params.id).select()
+    .then((group) => {
+      response.status(200).json(group)
+    })
+    .catch((error) => {
+      response.status(500).json({error})
+    });
+});
+
+function getGroup(request, response, groupId) {
+  database('group').where('group_id', groupId).select()
+    .then(group => {
+      response.status(200).json(group);
+    })
+    .catch(error => {
+      response.status(500).json({error: 'idk it did not work'});
+    })
+}
+
+app.get('/api/v1/group/validate/:passphrase/:userid', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+  await database('group').where('group_passphrase', request.params.passphrase).select()
+    .then(group => {
+      if (!group.length) {
+        return response.status(404).json({error: 'group passphrase not found'});
+      }
+      return addUserGroup(request, response, group[0].group_id, request.params.userid);
+    });
+});
+
+const addUserGroup = async (request, response, groupid, userid) => {
+  await database('users').where('user_id', userid).select().update({group_id: groupid})
+    .then(async (user) => {
+      response.status(200).json({status: 'success'})
+    })
+    .catch(error => {
+      response.status(500).json({error: 'error adding group to user - please try again'});
+    });
+}
+
 app.post('/api/v1/group/new', async (request, response) => {
   const currentUser = await getCurrentUser(request, response)
   if (!currentUser) {
-    console.log('no current user')
     return
   }
 
@@ -130,96 +203,71 @@ app.post('/api/v1/group/new', async (request, response) => {
     })
 });
 
+//EVENTS API FETCHES
 
-
-///////  ADD USER TO GROUP  ///////
-const addUserGroup = async (request, response, groupid, userid) => {
-  await database('users').where('user_id', userid).select().update({group_id: groupid})
-    .then(async (user) => {
-      response.status(200).json({status: 'success'})
-    })
-    .catch(error => {
-      response.status(500).json({error: 'error adding group to user - please try again'});
-    });
-}
-
-app.get('/api/v1/group/validate/:passphrase/:userid', async (request, response) => {
+app.post('/api/v1/events/getgroupdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    console.log('no current user')
     return
   }
-  await database('group').where('group_passphrase', request.params.passphrase).select()
-    .then(group => {
-      if (!group.length) {
-        return response.status(404).json({error: 'group passphrase not found'});
-      }
-      return addUserGroup(request, response, group[0].group_id, request.params.userid);
-    });
+
+  const { group } = request.body;
+  const currentDate = Date.now();
+
+  const { created_date, group_id } = group;
+  const adjDate = moment(created_date).subtract(7, 'days')
+
+  let earliestSunday = findSunday(adjDate);
+  let dateCollection = [];
+  let weekCounter = 1;
+
+  while(earliestSunday < currentDate) {
+    let transactions = await getTransactions(earliestSunday, group_id, 'group_id');
+
+    weekCounter++;
+    earliestSunday += (1000 * 60 * 60 * 24 * 7);
+    dateCollection = [...dateCollection, {transactions: transactions}];
+  }
+
+  response.status(200).json(dateCollection);
 });
 
-const findUser = async (request, response, groupid) => {
-  await database('users').where('group_id', groupid).select()
-    .then(user => {
-      return response.status(200).json(user);
-    })
-    .catch(error => {
-      return response.status(500).json({error: 'user not found'});
-    });
+const getTransactions = (start, id, criteria) => {
+  const endTime = start + (1000 * 60 * 60 * 24 * 7);
+  return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
+  .then(userEvents => {
+    return userEvents;
+  });
 }
 
+app.post('/api/v1/events/getuserdata/', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  //attempt at validating user.. look right Rob?
+  if (!currentUser) {
+    return
+  }
 
+  //get start date and the date user created their account
+  const { user } = request.body;
+  const currentDate = Date.now();
 
+  const { created_date, user_id } = user;
+  const adjDate = moment(created_date).subtract(7, 'days')
 
+  let earliestSunday = findSunday(adjDate);
+  let dateCollection = [];
+  let weekCounter = 1;
+  while(earliestSunday < currentDate) {
+    let sentTransactions = await getTransactions(earliestSunday, user_id, 'send_id');
+    let receivedTransactions = await getTransactions(earliestSunday, user_id, 'receive_id');
 
+    weekCounter++;
+    earliestSunday += (1000 * 60 * 60 * 24 * 7);
+    dateCollection = [...dateCollection, {sent: sentTransactions, received: receivedTransactions}];
+  }
 
-
-
-
-
-app.get('/api/v1/events/:id/total', async (request, response) => {
-  // console.log(request.params.id)
-  let total_points = await database('eventtracking').where('send_id', request.params.id).where('receive_id', 89234).select().sum('point_value')
-    .then((user) => {
-      // response.status(200).json(user)
-      return user
-    })
-    .catch((error) => {
-      response.status(500).json({error});
-    })
-    response.status(200).json({user_id: request.params.id, total_points: total_points})
-})
-
-app.get('/api/v1/events', (request, response) => {
-  database('eventtracking').select()
-    .then((event) => {
-      response.status(200).json(event);
-    })
-    .catch((error) => {
-      response.status(500).json({error});
-    })
+  response.status(200).json(dateCollection);
 });
-
-// app.get('/api/v1/users', (request, response) => {
-//   database('users').select()
-//     .then((user) => {
-//       response.status(200).json(user)
-//     })
-//     .catch((error) => {
-//       response.status(500).json({error});
-//     })
-// });
-
-// app.get('/api/v1/users/:id', (request, response) => {
-//   database('users').where('user_id', request.params.id).select()
-//     .then((user) => {
-//       response.status(200).json(user);
-//     })
-//     .catch((error) => {
-//       response.status(500).json({error})
-//     })
-// });
-
 
 app.post('/api/v1/eventtracking/new', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
@@ -265,14 +313,6 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
       total += transaction.point_value;
       return total;
     }, 0);
-
-
-    // console.log('sending user is ', getSendingUser);
-    // console.log('Receiving user is ', getReceivingUser);
-    // console.log('Receiving group is ', groupSettings);
-    // console.log('Last sunday is ', lastSunday);
-    // console.log('Recent transactions are ', getRecentTransactions);
-    // console.log('total transactions is ', sumRecentSentTransactions);
   
   if (!getReceivingUser || !getSendingUser) {
     return response.status(450).json({status: 'failure', error: 'Receiving user not found.'});
@@ -287,7 +327,6 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
 
   event.send_name = getSendingUser.name;
   event.received_name = getReceivingUser.name;
-  // console.log(event);
 
   database('eventtracking').insert(event, 'event_id')
     .then(event => {
@@ -298,146 +337,17 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
     })
 });
 
-app.get('/api/v1/group', (request, response) => {
-  database('group').select()
-    .then((group) => {
-      response.status(200).json(group);
-    })
-    .catch(error => {
-      response.status(500).json({error})
-    });
-});
-
-app.get('/api/v1/group/:id', async (request, response) => {
-  const currentUser = await getCurrentUser(request, response);
-  if (!currentUser) {
-    return
-  }
-
-  database('group').where('group_id', request.params.id).select()
-    .then((group) => {
-      response.status(200).json(group)
+app.get('/api/v1/events', (request, response) => {
+  database('eventtracking').select()
+    .then((event) => {
+      response.status(200).json(event);
     })
     .catch((error) => {
-      response.status(500).json({error})
-    });
-});
-
-
-
-function getGroup(request, response, groupId) {
-  database('group').where('group_id', groupId).select()
-    .then(group => {
-      response.status(200).json(group);
+      response.status(500).json({error});
     })
-    .catch(error => {
-      response.status(500).json({error: 'idk it did not work'});
-    })
-}
-
-// app.post('/api/v1/users/new', (request, response) => {
-//   const user = request.body;
-
-//   for(let requiredParameters of ['group_id', 'email', 'name', 'authrocket_id']) {
-//     if(!user[requiredParameters]) {
-//       return response
-//         .status(422)
-//         .send({ error: `missing parameter ${requiredParameters}`});
-//     }
-//   }  
-
-//   database('users').insert(user, 'user_id')
-//     .then(user => {
-//       response.status(200).json({status: 'success'});
-//     })
-//     .catch(error => {
-//       response.status(500).json({error: 'error adding user'});
-//     });
-// });
-
-
-
-/////NOTES:  ALWAYS VALIDATE ON AN API CALL!  AND send the JWT in the headers from the FE.  EVERY TIME!!! - HELL YEAH
-
-
-//query for user events
-app.post('/api/v1/events/getuserdata/', async (request, response) => {
-  const currentUser = await getCurrentUser(request, response);
-  //attempt at validating user.. look right Rob?
-  if (!currentUser) {
-    return
-  }
-
-  //get start date and the date user created their account
-  const { user } = request.body;
-  const currentDate = Date.now();
-
-  const { created_date, user_id } = user;
-  const adjDate = moment(created_date).subtract(7, 'days')
-
-  let earliestSunday = findSunday(adjDate);
-  let dateCollection = [];
-  let weekCounter = 1;
-  while(earliestSunday < currentDate) {
-    let sentTransactions = await getTransactions(earliestSunday, user_id, 'send_id');
-    let receivedTransactions = await getTransactions(earliestSunday, user_id, 'receive_id');
-
-    weekCounter++;
-    earliestSunday += (1000 * 60 * 60 * 24 * 7);
-    dateCollection = [...dateCollection, {sent: sentTransactions, received: receivedTransactions}];
-  }
-
-  response.status(200).json(dateCollection);
-});
-
-//find users in group network
-app.get('/api/v1/users/group/:groupid/', async (request, response) => {
-  const currentUser = await getCurrentUser(request, response);
-  if (!currentUser) {
-    return
-  }
-  if (request.params.groupid === 'null') {
-    return response.status(404).json({error: 'user not in a group.. join to see users in your network'});
-  }
-  
-  database('users').where('group_id', request.params.groupid).select()
-    .then((users) => {
-      response.status(200).json(users);
-    })
-    .catch(error => {
-      response.status(500).json({error: 'error retrieving users'});
-    });
-});
-
-app.post('/api/v1/events/getgroupdata/', async (request, response) => {
-  const currentUser = await getCurrentUser(request, response);
-  if (!currentUser) {
-    return
-  }
-
-  const { group } = request.body;
-  const currentDate = Date.now();
-
-  const { created_date, group_id } = group;
-  const adjDate = moment(created_date).subtract(7, 'days')
-
-  let earliestSunday = findSunday(adjDate);
-  let dateCollection = [];
-  let weekCounter = 1;
-
-  while(earliestSunday < currentDate) {
-    let transactions = await getTransactions(earliestSunday, group_id, 'group_id');
-
-    weekCounter++;
-    earliestSunday += (1000 * 60 * 60 * 24 * 7);
-    dateCollection = [...dateCollection, {transactions: transactions}];
-  }
-
-  response.status(200).json(dateCollection);
 });
 
 const getTransactions = (start, id, criteria) => {
-  // console.log(start, id, criteria);
   console.log('start: ', start, 'id :', id, 'criteria: ', criteria);
   console.log(typeof id);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);

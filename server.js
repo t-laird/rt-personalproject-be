@@ -57,11 +57,12 @@ const getCurrentUser =  async ( request, response ) => {
 
   let foundUser = null;
   await database('users').where('authrocket_id', userObject.uid).select()
-    .then((user) =>{
+    .then( async (user) =>{
       if (!user.length) {
-        foundUser = createUser( response, newUser );
+        foundUser = await createUser( response, newUser );
+      } else {
+        foundUser = user[0];
       }
-      foundUser = user[0];
     })
     .catch(error => {
       console.log('error loading user');
@@ -74,12 +75,13 @@ const getCurrentUser =  async ( request, response ) => {
 const createUser = async ( response, user ) => {
   let foundUser;
   await database('users').insert(user)
-    .then( user => {
+    .then( newUser => {
       foundUser = user;
     })
     .catch( error => {
       response.status(500).json({error});
     });
+  console.log('found user in create user is ', foundUser);
   return foundUser;
 };
 
@@ -88,11 +90,10 @@ app.get('/api/v1/users', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   console.log(currentUser)
   if (!currentUser) {
-    console.log('no current user')
     return
   }  //the first few lines should look the same for all calls
 
-  database('users').where('user_id', currentUser.user_id).select()
+  database('users').where('authrocket_id', currentUser.authrocket_id).select()
     .then((user) => {
       response.status(200).json(user);
     })

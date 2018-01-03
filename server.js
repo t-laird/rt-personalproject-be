@@ -134,8 +134,7 @@ app.post('/api/v1/group/new', async (request, response) => {
 const addUserGroup = async (request, response, groupid, userid) => {
   await database('users').where('user_id', userid).select().update({group_id: groupid})
     .then(async (user) => {
-      const foundUser = await findUser(request, response, groupid);
-      return foundUser
+      response.status(200).json({status: 'success'})
     })
     .catch(error => {
       response.status(500).json({error: 'error adding group to user - please try again'});

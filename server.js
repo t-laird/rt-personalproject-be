@@ -222,7 +222,7 @@ app.post('/api/v1/events/getgroupdata/', async (request, response) => {
   let weekCounter = 1;
 
   while(earliestSunday < currentDate) {
-    let transactions = await getTransactions(earliestSunday, group_id, 'group_id');
+    let transactions = await getGroupTransactions(earliestSunday, group_id, 'group_id');
 
     weekCounter++;
     earliestSunday += (1000 * 60 * 60 * 24 * 7);
@@ -231,14 +231,6 @@ app.post('/api/v1/events/getgroupdata/', async (request, response) => {
 
   response.status(200).json(dateCollection);
 });
-
-const getTransactions = (start, id, criteria) => {
-  const endTime = start + (1000 * 60 * 60 * 24 * 7);
-  return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
-  .then(userEvents => {
-    return userEvents;
-  });
-}
 
 app.post('/api/v1/events/getuserdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
@@ -251,15 +243,15 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
   const { user } = request.body;
   const currentDate = Date.now();
 
-  const { created_date, user_id } = user;
+  const { created_date, user_id, group_id } = user;
   const adjDate = moment(created_date).subtract(7, 'days')
 
   let earliestSunday = findSunday(adjDate);
   let dateCollection = [];
   let weekCounter = 1;
   while(earliestSunday < currentDate) {
-    let sentTransactions = await getTransactions(earliestSunday, user_id, 'send_id');
-    let receivedTransactions = await getTransactions(earliestSunday, user_id, 'receive_id');
+    let sentTransactions = await getUserTransactions(earliestSunday, user_id, group_id, 'send_id');
+    let receivedTransactions = await getUserTransactions(earliestSunday, user_id, group_id, 'receive_id');
 
     weekCounter++;
     earliestSunday += (1000 * 60 * 60 * 24 * 7);
@@ -347,13 +339,18 @@ app.get('/api/v1/events', (request, response) => {
     })
 });
 
-const getTransactions = (start, id, criteria) => {
-  console.log('start: ', start, 'id :', id, 'criteria: ', criteria);
-  console.log(typeof id);
+const getUserTransactions = (start, id, groupid, criteria) => {
+  const endTime = start + (1000 * 60 * 60 * 24 * 7);
+  return database('eventtracking').whereBetween('created_time', [start, endTime]).where('group_id', groupid).where(criteria, id).select()
+  .then(userEvents => {
+    return userEvents;
+  });
+}
+
+const getGroupTransactions = (start, id, criteria) => {
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
   .then(userEvents => {
-    console.log('with found events: ', userEvents);
     return userEvents;
   });
 }

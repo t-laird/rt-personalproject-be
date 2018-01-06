@@ -299,7 +299,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
       groupSettings = group[0];
     })
 
-    getRecentTransactions = await getTransactions(lastSunday, event.send_id, 'send_id');
+    getRecentTransactions = await getGroupTransactions(lastSunday, event.send_id, 'send_id');
 
     const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
       total += transaction.point_value;

@@ -16,6 +16,7 @@ const { findSunday } =  require('./helpers');
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 const corsOptions = {
   allowedOrigins: ['localhost:3001'],
@@ -48,11 +49,17 @@ const validate = (request, response) => {
   }
 };
 
-
-//USER API FETCHES
+////////////////////////////////////////////////////////////////////////////////////
+//USER API FETCHES//////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
 
 const getCurrentUser =  async ( request, response ) => {
   const userObject = await validate(request, response);
+  
+  if (!userObject) {
+    return;
+  }
+
   const newUser = {
     group_id: null,
     email: userObject.un,
@@ -99,7 +106,10 @@ app.get('/api/v1/users', async (request, response) => {
     })
 });
 
-//GROUP API FETCHES
+///////////////////////////////////////////////////////////////////////////////////
+//GROUP API FETCHES////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////
+
 app.get('/api/v1/users/group/:groupid/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
@@ -203,7 +213,9 @@ app.post('/api/v1/group/new', async (request, response) => {
     })
 });
 
-//EVENTS API FETCHES
+////////////////////////////////////////////////////////////////////////
+//EVENTS API FETCHES ///////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 
 app.post('/api/v1/events/getgroupdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
@@ -234,12 +246,10 @@ app.post('/api/v1/events/getgroupdata/', async (request, response) => {
 
 app.post('/api/v1/events/getuserdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
-  //attempt at validating user.. look right Rob?
   if (!currentUser) {
     return
   }
 
-  //get start date and the date user created their account
   const { user } = request.body;
   const currentDate = Date.now();
 
@@ -299,6 +309,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
       groupSettings = group[0];
     })
 
+    //note to self: LOOK AT THE BELOW FUNCTION - right? wrong? - THIS IS BROKEN
     getRecentTransactions = await getGroupTransactions(lastSunday, event.send_id, 'send_id');
 
     const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
@@ -340,6 +351,7 @@ app.get('/api/v1/events', (request, response) => {
 });
 
 const getUserTransactions = (start, id, groupid, criteria) => {
+  console.log(start, id, groupid);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where('group_id', groupid).where(criteria, id).select()
   .then(userEvents => {
@@ -353,6 +365,232 @@ const getGroupTransactions = (start, id, criteria) => {
   .then(userEvents => {
     return userEvents;
   });
+}
+
+///////////////////////////////////////////////////////////////////
+// SLACK Requests /////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+app.post('/slack/snap', async (request, response) => {
+  console.log(request.body);
+
+  // if (request.body.token !== verificationToken) {
+  //   return response.status(401).json({error: 'invalid request token'});
+  // }
+
+  checkSlackId(request.body.user_id, true);
+
+  const getUser = await findUser(request.body.user_id);
+
+  if(!getUser) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "You have not configured Snap Ninja with Slack yet! Link your Snap Ninja account to Slack for access to this feature!",
+          "attachments": [
+            {
+              "fallback": "Snap Ninja - Connect to Slack",
+              "color": "#df4054",
+              "author_icon": ":snap-ninja:",
+              "title": "Link your Snap Ninja account to Slack",
+              "text": `On the link slack page, input your user id: ${request.body.user_id}`,
+              "title_link": "http://localhost:3001/login/slack",
+              "footer": "SNAP NINJA",
+              "footer_icon": ":snap-ninja:",
+              "ts": "{time_short}"
+            }
+          ]
+        }
+    );
+  }
+
+  const testForRecipient = new RegExp(/<@\w+\|\w+>/);
+  const containsRecipient = testForRecipient.test(request.body.text);
+  const testForAttempt = new RegExp(/@/);
+  const validAttempt = testForAttempt.test(request.body.text);
+  const getReceivingSlackId = request.body.text.match(/\w+(?=\|)/);
+
+  if (!containsRecipient && validAttempt) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "Error: Slack could not find the user specified. Make sure you input their correct Slack handle!"
+      }
+    );
+  }
+
+  if (!containsRecipient && !validAttempt) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "Error: Please include the recipient's Slack handle following the /snap command (e.g. /snap @handle 10)"
+      }
+    );
+  }
+
+  const verifyId = await checkSlackId(getReceivingSlackId[0], false);
+  
+  if (!verifyId) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "Error: The recipient has not yet configured their Slack to accept Snaps :("
+      }
+    );
+  }
+
+  const confirmPoints = new RegExp(/\d+$/);
+  const validPoints = confirmPoints.test(request.body.text);
+
+  if(!validPoints) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "Error: Please enter a valid number of points at the end of the message (e.g. /snap @handle 10)"
+      }
+    );
+  }
+
+  const getPoints = request.body.text.match(confirmPoints)[0];
+  
+  const lastSunday = findSunday(new Date(Date.now()));
+  const getRecipient = await findUser(getReceivingSlackId[0]);
+
+  // if (getRecipient.group_id !== getUser.group_id) {
+  //   return response.status(200).json(
+  //     {
+  //       "response_type": "ephemeral",
+  //       "text": "Error: You must be in the same Snap Ninja group as the recipient of the points",
+  //       "attachments": [
+  //         {
+  //           "fallback": "Snap Ninja - Connect to Slack",
+  //           "color": "#df4054",
+  //           "author_icon": ":snap-ninja:",
+  //           "title": "Join a Group on Snap Ninja",
+  //           "text": "Join the same group as the person you want to send points to!",
+  //           "title_link": "http://localhost:3001/joingroup",
+  //           "footer": "SNAP NINJA",
+  //           "footer_icon": ":snap-ninja:",
+  //           "ts": "{time_short}"
+  //         }
+  //       ]
+  //     }
+  //   );
+  // }
+
+  let getRecentTransactions = await getUserTransactions(lastSunday, getUser.user_id, getUser.group_id, 'send_id');
+  let sentTransactions = await getUserTransactions(lastSunday, getUser.user_id, getUser.group_id, 'send_id')
+
+  const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
+    total += transaction.point_value;
+    return total;
+  }, 0);
+
+  let groupSettings;
+
+  await database('group').where('group_id', getUser.group_id).select()
+  .then((group) => {
+    groupSettings = group[0];
+  })
+
+
+  if (groupSettings.weekly_points - sumRecentSentTransactions < parseInt(getPoints)){
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": `Error: The snaps could not be sent because you only have ${groupSettings.weekly_points - sumRecentSentTransactions} left but you tried to send ${getPoints}`
+      }
+    );
+  }
+
+  console.log(getRecipient);
+  console.log(getUser);
+
+    const event = {
+      send_id: getUser.user_id,
+      created_time: Date.now(),
+      receive_id: getRecipient.user_id,
+      group_id: getUser.group_id,
+      point_value: parseInt(getPoints),
+      send_name: getUser.name,
+      received_name: getRecipient.name
+    };
+  
+  
+  await database('eventtracking').insert(event, 'event_id')
+  .then(event => {
+    console.log(event);
+    console.log('we did it');
+  })
+  .catch(error => {
+    console.log('we did not do it');
+  })
+
+
+  return response.status(200).json(
+    {
+      "response_type": "in_channel",
+      "text": `:snap-ninja: <@${request.body.user_id}> sent ${getPoints} points to<@${getReceivingSlackId[0]}>! :snap-ninja:`      
+    }
+  )
+});
+
+const findUser = async (slackId) => {
+  let foundUser;
+  await database('users').where('slack_id', slackId).select()
+    .then(async (user) => {
+      foundUser = user;
+    });
+  return foundUser[0];
+}
+
+const checkSlackId = async (slackId, insert) => {
+  let foundId;
+  await database('slackIds').where('slack_id', slackId).select()
+    .then(async (id) => {
+      foundId = id;
+    });
+  
+    if (!foundId.length && insert) {
+      return insertSlackId(slackId);
+    }
+
+    return foundId[0];
+  }
+
+const insertSlackId = async (slackId) => {
+  database('slackIds').insert({slack_id: slackId})
+    .then(id => {
+      console.log('success');
+    });
+}
+
+app.post('/api/v1/slack', async (request, response) => {
+  const currentUser = await getCurrentUser(request, response);
+  if (!currentUser) {
+    return
+  }
+  console.log(currentUser);
+  const slackId = request.body.id;
+
+  let validateId = await checkSlackId(slackId, false);
+  console.log(validateId);
+  
+  if (!validateId) {
+    return response.status(404).json({status: 'failure', error: 'user not found'});
+  }
+
+  return await updateUserSlackId(currentUser.authrocket_id, slackId, response);
+});
+
+const updateUserSlackId = async (authrocketId, slackId, response) => {
+  await database('users').where('authrocket_id', authrocketId).select().update({slack_id: slackId})
+    .then(user => {
+      return response.status(200).json({status: 'success'});
+    })
+    .catch(error => {
+      return response.status(500).json({status: 'failure', message: 'could not add slackId to user, please try again.'})
+    });
 }
 
 module.exports = app;

@@ -6,6 +6,7 @@ exports.up = function(knex, Promise) {
     table.integer('weekly_points');
     table.integer('administrator_id');
     table.timestamp('created_date').defaultTo(knex.fn.now());
+    table.string('slack_id');
   });
 };
 

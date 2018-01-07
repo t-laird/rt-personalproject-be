@@ -6,6 +6,7 @@ exports.up = function(knex, Promise) {
     table.string('email');
     table.string('name');
     table.string('authrocket_id');
+    table.string('slack_id');
   });
 };
 

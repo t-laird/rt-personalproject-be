@@ -289,6 +289,10 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
     }
   }
 
+  if (event.point_value < 0) {
+    return reponse.status(400).send({ error: 'please enter a valid points value'});
+  }
+
   let getSendingUser = null;  
   let getReceivingUser = null;
   let groupSettings = null;

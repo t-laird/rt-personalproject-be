@@ -3,7 +3,7 @@ const chai  = require('chai');
     chaiHttp = require('chai-http');
     server = require('./server');
     should = chai.should();
-    xToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImpreV8wdlhXRGRqMURGY0xtSUdiUGhCTDRIIn0.eyJpYXQiOjE1MTQ4NTI5MzksImV4cCI6MTUxNDg3NDUzOSwidWlkIjoidXNyXzB2WFhGckFtcGpTV1hucjduMngybTgiLCJ1biI6InQ2cjZsNUBnbWFpbC5jb20iLCJmbiI6IlRob21hcyIsImxuIjoiTGFpcmQiLCJuIjoiVGhvbWFzIExhaXJkIiwidGsiOiJrc3NfMHZYbXh0MzRrQ3NDdWJEemxrQUpUViJ9.xuKGB1FGQG1ObPzH7_6qd2yNb5bD6pbmvJo9B4ntsBdATsEi-S4aD5MUKFeqLTg3AgBE_QKoF9zq6pcNQqkA24tuRChCmUMvUaO3fDlcdhoL4jm1llWUHb8Vz3kp_z12NzCEOr1HqUNjFiAZGJc-3B5gZPwnm-mvXNyT_KhD-S05ijslrZurlbGF5cx9sQCdGuX9ARdzbt8P0aTf9tVaC5gQ1VgT-xhJ4KYvD4uanYxD3nloaPF11qobBW9eqZ-xY_moqByDobvlA-bJWDtpcp7ECZRJwfwIdJfxUDZv1U7g0ewyFpsDDmC9hSEWqxlCJwBnvVeWxd5V0CBpMu9wyg";
+    xToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImpreV8wdlhXRGRqMURGY0xtSUdiUGhCTDRIIn0.eyJpYXQiOjE1MTUzNzgyNzksImV4cCI6MTUxNTM5OTg3OSwidWlkIjoidXNyXzB2WHBjeVozaHllZm1DdWpsdkNEaDIiLCJ1biI6InQ2cjZsNUBnbWFpbC5jb20iLCJmbiI6IlRob21hcyIsImxuIjoiTGFpcmQiLCJuIjoiVGhvbWFzIExhaXJkIiwidGsiOiJrc3NfMHZYdlFUaXdScWFwWU1ia053Q2JPVCJ9.cTNlAat4ylLXVwy4__AEQKbfYzv_USKho0A8IKKAj6uHHJH7eMSN_ykyrKpMd8eVXcGXEfTOuRlruZFYR441yW_jrykmDPq9R4xRQPB1QaqtP4V_AGqbn51WxEDoZj8TwD96pADQd1Pm1hFL1LplnOtEgx-iA8v1JdVb7WISHiSR1shZKZXDf5ARqRvD4G7XK0n4EAy23tahrXYdBUxdnMKIU86s_XdbW9B2QUCYEI1JgItysQI_OUNpCqGL-c3VdIQvb6f9zkKAz6ILwKNS6YDY52OA27iUloLLtH4Mq29fbDk2c6u4CbjdfII33KWIH3Ve_DJOGBg1pV0lclUYBw";
   
 chai.use(chaiHttp);
 
@@ -16,7 +16,7 @@ describe('user routes', () => {
       .then(response => {
         response.should.have.status(200);
         response.body[0].should.have.property('user_id');
-        response.body[0].user_id.should.deep.equal(9);
+        response.body[0].user_id.should.deep.equal(8);
         response.body[0].should.have.property('created_date');
         response.body[0].should.have.property('group_id');
         response.body[0].should.have.property('email');
@@ -24,7 +24,6 @@ describe('user routes', () => {
         response.body[0].should.have.property('name');
         response.body[0].name.should.equal('Thomas Laird');
         response.body[0].should.have.property('authrocket_id');
-        response.body[0].authrocket_id.should.equal('usr_0vXXFrAmpjSWXnr7n2x2m8');
       })
       .catch(err => {
         throw err;
@@ -79,22 +78,6 @@ describe('user routes', () => {
   
   
   describe('events routes', () => {
-    it('should sum the points belonging to a particular user', () => {
-      return chai.request(server)
-        .get('/api/v1/events/85/total')
-        .set('x-token', xToken)
-        .then(response => {
-          response.should.have.status(200);
-          response.body.should.have.property('user_id');
-          response.body.should.have.property('total_points');
-          response.body.user_id.should.be.deep.equal('85');
-          response.body.total_points.should.deep.equal([{ sum: null}]);
-        })
-        .catch(err => {
-          throw err;
-        });
-    });
-
     it.skip('should create a new event', () => {
       return chai.request(server)
         .post('/api/v1/eventtracking/new')
@@ -165,7 +148,7 @@ describe('user routes', () => {
       .get('/api/v1/events')
       .then(response => {
         response.should.have.status(200);
-        response.body.length.should.equal(35);
+        response.body.length.should.equal(37);
       })
       .catch(err => {
         throw err;
@@ -213,13 +196,7 @@ describe('user routes', () => {
       .set('x-token', xToken)
       .then(response => {
         response.should.have.status(200);
-        response.body[0].should.have.property('user_id');
-        response.body[0].should.have.property('created_date');
-        response.body[0].should.have.property('group_id');
-        response.body[0].should.have.property('email');
-        response.body[0].should.have.property('name');
-        response.body[0].should.have.property('authrocket_id');
-        response.body[0].group_id.should.deep.equal(15);
+        response.body.status.should.equal('success');
       });
     });
 
@@ -236,7 +213,7 @@ describe('user routes', () => {
 
     it('should return a specific group given a group id', () => {
       return chai.request(server)
-      .get('/api/v1/group/31')
+      .get('/api/v1/group/5')
       .set('x-token', xToken)
       .then(response => {
         response.should.have.status(200)
@@ -246,6 +223,55 @@ describe('user routes', () => {
         response.body[0].should.have.property('administrator_id');
         response.body[0].should.have.property('created_date');
         response.body[0].should.have.property('group_name');
+      })
+      .catch(err => {
+        throw err;
+      })
+    });
+  });
+
+  describe('slack routes', () => {
+    it('should be able to create an event from slack', () => {
+      return chai.request(server)
+        .post('/api/v1/slack')
+        .set('x-token', xToken)
+        .send({
+          id: 'U8PU91694'
+        })
+        .then(response => {
+          response.should.have.status(200);
+          response.body.status.should.equal('success');
+        })
+        .catch(err => {
+          throw err;
+        });
+    });
+
+    it('should throw a 401 if the slackid is invalid', () => {
+      return chai.request(server)
+      .post('/api/v1/slack')
+      .set('x-token', xToken)
+      .send({
+        id: 'sdfsdfdsf'
+      })
+      .then(response => {
+        throw 'should have failed'
+      })
+      .catch(err => {
+        err.should.have.status(404);
+      });
+    });
+
+    it('give a 200 status when posting to /slack/snap', () => {
+      return chai.request(server)
+      .post('/slack/snap')
+      .send({
+        user_id: 3
+      }).then(response => {
+        response.should.have.status(200);
+      })
+      .catch(err => {
+        throw err;
       });
     });
   });

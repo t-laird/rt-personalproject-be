@@ -373,9 +373,9 @@ const getGroupTransactions = (start, id, criteria) => {
 
 app.post('/slack/snap', async (request, response) => {
 
-  if (request.body.token !== verificationToken) {
-    return response.status(401).json({error: 'invalid request token'});
-  }
+  // if (request.body.token !== verificationToken) {
+  //   return response.status(401).json({error: 'invalid request token'});
+  // }
 
   checkSlackId(request.body.user_id, true);
 

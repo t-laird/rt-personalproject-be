@@ -372,7 +372,6 @@ const getGroupTransactions = (start, id, criteria) => {
 ///////////////////////////////////////////////////////////////////
 
 app.post('/slack/snap', async (request, response) => {
-  console.log(request.body);
 
   // if (request.body.token !== verificationToken) {
   //   return response.status(401).json({error: 'invalid request token'});
@@ -456,27 +455,27 @@ app.post('/slack/snap', async (request, response) => {
   const lastSunday = findSunday(new Date(Date.now()));
   const getRecipient = await findUser(getReceivingSlackId[0]);
 
-  // if (getRecipient.group_id !== getUser.group_id) {
-  //   return response.status(200).json(
-  //     {
-  //       "response_type": "ephemeral",
-  //       "text": "Error: You must be in the same Snap Ninja group as the recipient of the points",
-  //       "attachments": [
-  //         {
-  //           "fallback": "Snap Ninja - Connect to Slack",
-  //           "color": "#df4054",
-  //           "author_icon": ":snap-ninja:",
-  //           "title": "Join a Group on Snap Ninja",
-  //           "text": "Join the same group as the person you want to send points to!",
-  //           "title_link": "http://localhost:3001/joingroup",
-  //           "footer": "SNAP NINJA",
-  //           "footer_icon": ":snap-ninja:",
-  //           "ts": "{time_short}"
-  //         }
-  //       ]
-  //     }
-  //   );
-  // }
+  if (getRecipient.group_id !== getUser.group_id) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "Error: You must be in the same Snap Ninja group as the recipient of the points",
+        "attachments": [
+          {
+            "fallback": "Snap Ninja - Connect to Slack",
+            "color": "#df4054",
+            "author_icon": ":snap-ninja:",
+            "title": "Join a Group on Snap Ninja",
+            "text": "Join the same group as the person you want to send points to!",
+            "title_link": "http://localhost:3001/joingroup",
+            "footer": "SNAP NINJA",
+            "footer_icon": ":snap-ninja:",
+            "ts": "{time_short}"
+          }
+        ]
+      }
+    );
+  }
 
   let getRecentTransactions = await getUserTransactions(lastSunday, getUser.user_id, getUser.group_id, 'send_id');
 

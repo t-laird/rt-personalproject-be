@@ -4,6 +4,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('express-cors');
 const path = require('path');
+
+const environment = process.env.NODE_ENV || 'development';
+
 const configuration = require('./knexfile')[environment];
 const database = require('knex')(configuration);
 const moment = require('moment');
@@ -12,7 +15,6 @@ const key = require('./pubKey');
 var pg = require('pg');
 
 
-const environment = process.env.NODE_ENV || 'development';
 const app = express();
 pg.types.setTypeParser(20, 'text', parseInt);
 const { findSunday } =  require('./helpers');

@@ -1,16 +1,19 @@
+/* eslint-disable no-console */
+
 const express = require('express');
 const bodyParser = require('body-parser');
-const app = express();
 const cors = require('express-cors');
 const path = require('path');
-const environment = process.env.NODE_ENV || 'development';
 const configuration = require('./knexfile')[environment];
 const database = require('knex')(configuration);
 const moment = require('moment');
 const { KEYUTIL, KJUR, b64utoutf8 } = require('jsrsasign');
 const key = require('./pubKey');
-var pg = require('pg')
+var pg = require('pg');
 
+
+const environment = process.env.NODE_ENV || 'development';
+const app = express();
 pg.types.setTypeParser(20, 'text', parseInt);
 const { findSunday } =  require('./helpers');
 
@@ -80,12 +83,12 @@ const getCurrentUser =  async ( request, response ) => {
       response.status(404).json({error});
     });
   return foundUser;
-}
+};
 
 const createUser = async ( response, user ) => {
   let foundUser;
   await database('users').insert(user)
-    .then( newUser => {
+    .then(() => {
       foundUser = user;
     })
     .catch( error => {
@@ -97,13 +100,13 @@ const createUser = async ( response, user ) => {
 app.get('/api/v1/users', async (request, response) => { 
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
 
   database('users').where('authrocket_id', currentUser.authrocket_id).select()
     .then((user) => {
       response.status(200).json(user);
-    })
+    });
 });
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -113,7 +116,7 @@ app.get('/api/v1/users', async (request, response) => {
 app.get('/api/v1/users/group/:groupid/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
   if (request.params.groupid === 'null') {
     return response.status(404).json({error: 'user not in a group.. join to see users in your network'});
@@ -123,7 +126,7 @@ app.get('/api/v1/users/group/:groupid/', async (request, response) => {
     .then((users) => {
       response.status(200).json(users);
     })
-    .catch(error => {
+    .catch(() => {
       response.status(500).json({error: 'error retrieving users'});
     });
 });
@@ -134,22 +137,22 @@ app.get('/api/v1/group', (request, response) => {
       response.status(200).json(group);
     })
     .catch(error => {
-      response.status(500).json({error})
+      response.status(500).json({error});
     });
 });
 
 app.get('/api/v1/group/:id', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
 
   database('group').where('group_id', request.params.id).select()
     .then((group) => {
-      response.status(200).json(group)
+      response.status(200).json(group);
     })
     .catch((error) => {
-      response.status(500).json({error})
+      response.status(500).json({error});
     });
 });
 
@@ -158,15 +161,15 @@ function getGroup(request, response, groupId) {
     .then(group => {
       response.status(200).json(group);
     })
-    .catch(error => {
+    .catch(() => {
       response.status(500).json({error: 'idk it did not work'});
-    })
+    });
 }
 
 app.get('/api/v1/group/validate/:passphrase/:userid', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
   await database('group').where('group_passphrase', request.params.passphrase).select()
     .then(group => {
@@ -179,38 +182,38 @@ app.get('/api/v1/group/validate/:passphrase/:userid', async (request, response) 
 
 const addUserGroup = async (request, response, groupid, userid) => {
   await database('users').where('user_id', userid).select().update({group_id: groupid})
-    .then(async (user) => {
-      response.status(200).json({status: 'success'})
+    .then(async () => {
+      response.status(200).json({status: 'success'});
     })
-    .catch(error => {
+    .catch(() => {
       response.status(500).json({error: 'error adding group to user - please try again'});
     });
-}
+};
 
 app.post('/api/v1/group/new', async (request, response) => {
-  const currentUser = await getCurrentUser(request, response)
+  const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
 
   const group = request.body;
 
-  for(let requiredParameters of ['group_name', 'group_passphrase', 'weekly_points']) {
-    if(!group[requiredParameters]) {
+  for (let requiredParameters of ['group_name', 'group_passphrase', 'weekly_points']) {
+    if (!group[requiredParameters]) {
       return response
         .status(422)
-        .send({ error: `missing parameter ${requiredParameters}`})
+        .send({ error: `missing parameter ${requiredParameters}`});
     }
   }  
   group.administrator_id = currentUser.user_id;
 
   database('group').insert(group, 'group_id')
     .then(group => {
-      return getGroup(request, response, group[0])
+      return getGroup(request, response, group[0]);
     })
     .catch(error => {
       response.status(500).json({error});
-    })
+    });
 });
 
 ////////////////////////////////////////////////////////////////////////
@@ -220,23 +223,21 @@ app.post('/api/v1/group/new', async (request, response) => {
 app.post('/api/v1/events/getgroupdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
 
   const { group } = request.body;
   const currentDate = Date.now();
 
   const { created_date, group_id } = group;
-  const adjDate = moment(created_date).subtract(7, 'days')
+  const adjDate = moment(created_date).subtract(7, 'days');
 
   let earliestSunday = findSunday(adjDate);
   let dateCollection = [];
-  let weekCounter = 1;
 
-  while(earliestSunday < currentDate) {
+  while (earliestSunday < currentDate) {
     let transactions = await getGroupTransactions(earliestSunday, group_id, 'group_id');
 
-    weekCounter++;
     earliestSunday += (1000 * 60 * 60 * 24 * 7);
     dateCollection = [...dateCollection, {transactions: transactions}];
   }
@@ -247,23 +248,21 @@ app.post('/api/v1/events/getgroupdata/', async (request, response) => {
 app.post('/api/v1/events/getuserdata/', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
 
   const { user } = request.body;
   const currentDate = Date.now();
 
   const { created_date, user_id, group_id } = user;
-  const adjDate = moment(created_date).subtract(7, 'days')
+  const adjDate = moment(created_date).subtract(7, 'days');
 
   let earliestSunday = findSunday(adjDate);
   let dateCollection = [];
-  let weekCounter = 1;
-  while(earliestSunday < currentDate) {
+  while (earliestSunday < currentDate) {
     let sentTransactions = await getUserTransactions(earliestSunday, user_id, group_id, 'send_id');
     let receivedTransactions = await getUserTransactions(earliestSunday, user_id, group_id, 'receive_id');
 
-    weekCounter++;
     earliestSunday += (1000 * 60 * 60 * 24 * 7);
     dateCollection = [...dateCollection, {sent: sentTransactions, received: receivedTransactions}];
   }
@@ -274,17 +273,17 @@ app.post('/api/v1/events/getuserdata/', async (request, response) => {
 app.post('/api/v1/eventtracking/new', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
 
   const event = request.body;
   event.created_time = Date.now();
 
-  for(let requiredParameters of ['send_id', 'receive_id', 'group_id', 'point_value']) {
-    if(!event[requiredParameters]) {
+  for (let requiredParameters of ['send_id', 'receive_id', 'group_id', 'point_value']) {
+    if (!event[requiredParameters]) {
       return response
         .status(422)
-        .send({ error: `missing parameter ${requiredParameters}`})
+        .send({ error: `missing parameter ${requiredParameters}`});
     }
   }
 
@@ -297,25 +296,24 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
   await database('users').where('user_id', event.send_id).select()
     .then((user) => {
       getSendingUser = user[0];
-    })
+    });
 
   await database('users').where('user_id', event.receive_id).select()
     .then((user) => {
       getReceivingUser = user[0];
-    })
+    });
 
   await database('group').where('group_id', event.group_id).select()
     .then((group) => {
       groupSettings = group[0];
-    })
+    });
 
-    //note to self: LOOK AT THE BELOW FUNCTION - right? wrong? - THIS IS BROKEN
-    getRecentTransactions = await getGroupTransactions(lastSunday, event.send_id, 'send_id');
+  getRecentTransactions = await getUserTransactions(lastSunday, getSendingUser.user_id, groupSettings.group_id, 'send_id');
 
-    const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
-      total += transaction.point_value;
-      return total;
-    }, 0);
+  const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
+    total += transaction.point_value;
+    return total;
+  }, 0);
   
   if (!getReceivingUser || !getSendingUser) {
     return response.status(450).json({status: 'failure', error: 'Receiving user not found.'});
@@ -328,6 +326,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
     return response.status(450).json({status: 'failure', error: `Transaction could not be completed. Your remaining point balance is ${remainingPoints}.`});
   }
 
+
   event.send_name = getSendingUser.name;
   event.received_name = getReceivingUser.name;
 
@@ -337,7 +336,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
     })
     .catch(error => {
       response.status(500).json({status: 'failure', error});
-    })
+    });
 });
 
 app.get('/api/v1/events', (request, response) => {
@@ -347,25 +346,24 @@ app.get('/api/v1/events', (request, response) => {
     })
     .catch((error) => {
       response.status(500).json({error});
-    })
+    });
 });
 
 const getUserTransactions = (start, id, groupid, criteria) => {
-  console.log(start, id, groupid);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where('group_id', groupid).where(criteria, id).select()
-  .then(userEvents => {
-    return userEvents;
-  });
-}
+    .then(userEvents => {
+      return userEvents;
+    });
+};
 
 const getGroupTransactions = (start, id, criteria) => {
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where(criteria, id).select()
-  .then(userEvents => {
-    return userEvents;
-  });
-}
+    .then(userEvents => {
+      return userEvents;
+    });
+};
 
 ///////////////////////////////////////////////////////////////////
 // SLACK Requests /////////////////////////////////////////////////
@@ -382,25 +380,25 @@ app.post('/slack/snap', async (request, response) => {
 
   const getUser = await findUser(request.body.user_id);
 
-  if(!getUser) {
+  if (!getUser) {
     return response.status(200).json(
       {
         "response_type": "ephemeral",
         "text": "You have not configured Snap Ninja with Slack yet! Link your Snap Ninja account to Slack for access to this feature!",
-          "attachments": [
-            {
-              "fallback": "Snap Ninja - Connect to Slack",
-              "color": "#df4054",
-              "author_icon": ":snap-ninja:",
-              "title": "Link your Snap Ninja account to Slack",
-              "text": `On the link slack page, input your user id: ${request.body.user_id}`,
-              "title_link": "http://localhost:3001/login/slack",
-              "footer": "SNAP NINJA",
-              "footer_icon": ":snap-ninja:",
-              "ts": "{time_short}"
-            }
-          ]
-        }
+        "attachments": [
+          {
+            "fallback": "Snap Ninja - Connect to Slack",
+            "color": "#df4054",
+            "author_icon": ":snap-ninja:",
+            "title": "Link your Snap Ninja account to Slack",
+            "text": `On the link slack page, input your user id: ${request.body.user_id}`,
+            "title_link": "http://localhost:3001/login/slack",
+            "footer": "SNAP NINJA",
+            "footer_icon": ":snap-ninja:",
+            "ts": "{time_short}"
+          }
+        ]
+      }
     );
   }
 
@@ -442,7 +440,7 @@ app.post('/slack/snap', async (request, response) => {
   const confirmPoints = new RegExp(/\d+$/);
   const validPoints = confirmPoints.test(request.body.text);
 
-  if(!validPoints) {
+  if (!validPoints) {
     return response.status(200).json(
       {
         "response_type": "ephemeral",
@@ -479,7 +477,6 @@ app.post('/slack/snap', async (request, response) => {
   // }
 
   let getRecentTransactions = await getUserTransactions(lastSunday, getUser.user_id, getUser.group_id, 'send_id');
-  let sentTransactions = await getUserTransactions(lastSunday, getUser.user_id, getUser.group_id, 'send_id')
 
   const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
     total += transaction.point_value;
@@ -489,9 +486,31 @@ app.post('/slack/snap', async (request, response) => {
   let groupSettings;
 
   await database('group').where('group_id', getUser.group_id).select()
-  .then((group) => {
-    groupSettings = group[0];
-  })
+    .then((group) => {
+      groupSettings = group[0];
+    });
+  
+  if (!groupSettings) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "Error: You are not currently in a group. Visit the Slack Ninja website to join a group!",
+        "attachments": [
+          {
+            "fallback": "Snap Ninja - Connect to Slack",
+            "color": "#df4054",
+            "author_icon": ":snap-ninja:",
+            "title": "Join a Group on Snap Ninja",
+            "text": "Go to the 'Join Group' tab on the Slack Ninja website",
+            "title_link": "http://localhost:3001/login/slack",
+            "footer": "SNAP NINJA",
+            "footer_icon": ":snap-ninja:",
+            "ts": "{time_short}"
+          }
+        ]
+      }
+    );
+  }
 
 
   if (groupSettings.weekly_points - sumRecentSentTransactions < parseInt(getPoints)){
@@ -506,33 +525,33 @@ app.post('/slack/snap', async (request, response) => {
   console.log(getRecipient);
   console.log(getUser);
 
-    const event = {
-      send_id: getUser.user_id,
-      created_time: Date.now(),
-      receive_id: getRecipient.user_id,
-      group_id: getUser.group_id,
-      point_value: parseInt(getPoints),
-      send_name: getUser.name,
-      received_name: getRecipient.name
-    };
+  const event = {
+    send_id: getUser.user_id,
+    created_time: Date.now(),
+    receive_id: getRecipient.user_id,
+    group_id: getUser.group_id,
+    point_value: parseInt(getPoints),
+    send_name: getUser.name,
+    received_name: getRecipient.name
+  };
   
   
   await database('eventtracking').insert(event, 'event_id')
-  .then(event => {
-    console.log(event);
-    console.log('we did it');
-  })
-  .catch(error => {
-    console.log('we did not do it');
-  })
+    .then(event => {
+      console.log(event);
+      console.log('we did it');
+    })
+    .catch(() => {
+      console.log('we did not do it');
+    });
 
 
   return response.status(200).json(
     {
       "response_type": "in_channel",
-      "text": `:snap-ninja: <@${request.body.user_id}> sent ${getPoints} points to<@${getReceivingSlackId[0]}>! :snap-ninja:`      
+      "text": `:snap-ninja: <@${request.body.user_id}> sent ${getPoints} snaps to<@${getReceivingSlackId[0]}>! :snap-ninja:`      
     }
-  )
+  );
 });
 
 const findUser = async (slackId) => {
@@ -542,7 +561,7 @@ const findUser = async (slackId) => {
       foundUser = user;
     });
   return foundUser[0];
-}
+};
 
 const checkSlackId = async (slackId, insert) => {
   let foundId;
@@ -551,24 +570,24 @@ const checkSlackId = async (slackId, insert) => {
       foundId = id;
     });
   
-    if (!foundId.length && insert) {
-      return insertSlackId(slackId);
-    }
-
-    return foundId[0];
+  if (!foundId.length && insert) {
+    return insertSlackId(slackId);
   }
 
+  return foundId[0];
+};
+
 const insertSlackId = async (slackId) => {
-  database('slackIds').insert({slack_id: slackId})
-    .then(id => {
+  database('slackIds').insert({ slack_id: slackId })
+    .then(() => {
       console.log('success');
     });
-}
+};
 
 app.post('/api/v1/slack', async (request, response) => {
   const currentUser = await getCurrentUser(request, response);
   if (!currentUser) {
-    return
+    return;
   }
   console.log(currentUser);
   const slackId = request.body.id;
@@ -577,7 +596,7 @@ app.post('/api/v1/slack', async (request, response) => {
   console.log(validateId);
   
   if (!validateId) {
-    return response.status(404).json({status: 'failure', error: 'user not found'});
+    return response.status(404).json({ status: 'failure', error: 'user not found' });
   }
 
   return await updateUserSlackId(currentUser.authrocket_id, slackId, response);
@@ -585,12 +604,13 @@ app.post('/api/v1/slack', async (request, response) => {
 
 const updateUserSlackId = async (authrocketId, slackId, response) => {
   await database('users').where('authrocket_id', authrocketId).select().update({slack_id: slackId})
-    .then(user => {
-      return response.status(200).json({status: 'success'});
+    .then(() => {
+      return response.status(200).json({ status: 'success' });
     })
-    .catch(error => {
-      return response.status(500).json({status: 'failure', message: 'could not add slackId to user, please try again.'})
+    .catch(() => {
+      return response.status(500).json({ status: 'failure', message: 'could not add slackId to user, please try again.' });
     });
-}
+};
 
 module.exports = app;
+

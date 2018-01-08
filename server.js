@@ -309,8 +309,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
       groupSettings = group[0];
     })
 
-    //note to self: LOOK AT THE BELOW FUNCTION - right? wrong? - THIS IS BROKEN
-    getRecentTransactions = await getGroupTransactions(lastSunday, event.send_id, 'send_id');
+    getRecentTransactions = await getUserTransactions(lastSunday, getSendingUser.user_id, groupSettings.group_id, 'send_id');
 
     const sumRecentSentTransactions = getRecentTransactions.reduce( (total, transaction) => {
       total += transaction.point_value;
@@ -327,6 +326,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
     const remainingPoints = groupSettings.weekly_points - sumRecentSentTransactions;
     return response.status(450).json({status: 'failure', error: `Transaction could not be completed. Your remaining point balance is ${remainingPoints}.`});
   }
+
 
   event.send_name = getSendingUser.name;
   event.received_name = getReceivingUser.name;
@@ -351,7 +351,6 @@ app.get('/api/v1/events', (request, response) => {
 });
 
 const getUserTransactions = (start, id, groupid, criteria) => {
-  console.log(start, id, groupid);
   const endTime = start + (1000 * 60 * 60 * 24 * 7);
   return database('eventtracking').whereBetween('created_time', [start, endTime]).where('group_id', groupid).where(criteria, id).select()
   .then(userEvents => {
@@ -492,6 +491,28 @@ app.post('/slack/snap', async (request, response) => {
   .then((group) => {
     groupSettings = group[0];
   })
+  
+  if (!groupSettings) {
+    return response.status(200).json(
+      {
+        "response_type": "ephemeral",
+        "text": "Error: You are not currently in a group. Visit the Slack Ninja website to join a group!",
+        "attachments": [
+          {
+            "fallback": "Snap Ninja - Connect to Slack",
+            "color": "#df4054",
+            "author_icon": ":snap-ninja:",
+            "title": "Join a Group on Snap Ninja",
+            "text": "Go to the 'Join Group' tab on the Slack Ninja website",
+            "title_link": "http://localhost:3001/login/slack",
+            "footer": "SNAP NINJA",
+            "footer_icon": ":snap-ninja:",
+            "ts": "{time_short}"
+          }
+        ]
+      }
+    );
+  }
 
 
   if (groupSettings.weekly_points - sumRecentSentTransactions < parseInt(getPoints)){
@@ -530,7 +551,7 @@ app.post('/slack/snap', async (request, response) => {
   return response.status(200).json(
     {
       "response_type": "in_channel",
-      "text": `:snap-ninja: <@${request.body.user_id}> sent ${getPoints} points to<@${getReceivingSlackId[0]}>! :snap-ninja:`      
+      "text": `:snap-ninja: <@${request.body.user_id}> sent ${getPoints} snaps to<@${getReceivingSlackId[0]}>! :snap-ninja:`      
     }
   )
 });

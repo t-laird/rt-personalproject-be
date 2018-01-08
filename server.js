@@ -290,7 +290,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
   }
 
   if (event.point_value < 0) {
-    return reponse.status(400).send({ error: 'please enter a valid points value'});
+    return reponse.status(400).send({ status: 'failure', error: 'please enter a valid points value'});
   }
 
   let getSendingUser = null;  
@@ -323,6 +323,8 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
   
   if (!getReceivingUser || !getSendingUser) {
     return response.status(450).json({status: 'failure', error: 'Receiving user not found.'});
+  } else if (getReceivingUser.name && getSendingUser.name) {
+    return response.status(450).json({status: 'failure', error: 'You can\'t send points to yourself!'});
   } else if (getReceivingUser.group_id !== getSendingUser.group_id) {
     return response.status(450).json({status: 'failure', error: 'The receiving user is not in your group!'});
   } else if (!groupSettings) {

@@ -323,7 +323,7 @@ app.post('/api/v1/eventtracking/new', async (request, response) => {
   
   if (!getReceivingUser || !getSendingUser) {
     return response.status(450).json({status: 'failure', error: 'Receiving user not found.'});
-  } else if (getReceivingUser.name && getSendingUser.name) {
+  } else if (getReceivingUser.name === getSendingUser.name) {
     return response.status(450).json({status: 'failure', error: 'You can\'t send points to yourself!'});
   } else if (getReceivingUser.group_id !== getSendingUser.group_id) {
     return response.status(450).json({status: 'failure', error: 'The receiving user is not in your group!'});

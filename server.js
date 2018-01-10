@@ -23,20 +23,34 @@ const corsOptions = {
   headers: ['Content-Type', 'x-token']
 };
 
-app.use(cors(corsOptions));
-pg.types.setTypeParser(20, 'text', parseInt);
-const { findSunday } =  require('./helpers');
+var allowCrossDomain = function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', 'https://t-laird.com');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
 
+  // intercept OPTIONS method
+  if ('OPTIONS' == req.method) {
+    res.send(200);
+  }
+  else {
+    next();
+  }
+};
+
+app.use(allowCrossDomain);
+app.use(cors(corsOptions));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
+pg.types.setTypeParser(20, 'text', parseInt);
+const { findSunday } =  require('./helpers');
+
 app.set('port', process.env.PORT || 3000);
 
-
 app.listen(app.get('port'), () => {
-  console.log('database is running on localhost:3000');
+  console.log(`database is running on ${app.get('port')}`);
 });
 
 

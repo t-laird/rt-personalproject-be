@@ -24,7 +24,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const corsOptions = {
-  allowedOrigins: ['localhost:3001', 't-laird.github.io', 'localhost:3000', 't-laird.com', 'http://t-laird.com', 'https://t-laird.com'],
+  allowedOrigins: ['localhost:3001', 't-laird.github.io', 'localhost:3000', 't-laird.com', 'http://t-laird.com', 'https://t-laird.com', '*'],
   preflightContinue: true,
   headers: ['Content-Type', 'x-token']
 };

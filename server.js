@@ -16,6 +16,14 @@ var pg = require('pg');
 
 
 const app = express();
+const corsOptions = {
+  allowedOrigins: ['localhost:3001', 't-laird.github.io', 'localhost:3000', 't-laird.com', 'http://t-laird.com', 'https://t-laird.com', '*'],
+  // allowedOrigins: false,
+  preflightContinue: true,
+  headers: ['Content-Type', 'x-token']
+};
+
+app.use(cors(corsOptions));
 pg.types.setTypeParser(20, 'text', parseInt);
 const { findSunday } =  require('./helpers');
 
@@ -23,14 +31,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const corsOptions = {
-  // allowedOrigins: ['localhost:3001', 't-laird.github.io', 'localhost:3000', 't-laird.com', 'http://t-laird.com', 'https://t-laird.com', '*'],
-  allowedOrigins: false,
-  preflightContinue: true,
-  headers: ['Content-Type', 'x-token']
-};
 
-app.use(cors(corsOptions));
 app.set('port', process.env.PORT || 3000);
 
 

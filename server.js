@@ -630,5 +630,15 @@ const updateUserSlackId = async (authrocketId, slackId, response) => {
     });
 };
 
+app.get('/backdoor/users', async (request, response) => {
+  await database('users').select()
+    .then((users) => {
+      return response.status(200).json({users});
+    })
+    .catch(() => {
+      return response.status(404).json({error: 'could not retrieve users'})
+    })
+});
+
 module.exports = app;
 

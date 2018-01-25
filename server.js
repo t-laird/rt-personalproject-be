@@ -556,7 +556,7 @@ app.post('/slack/snap', async (request, response) => {
     point_value: parseInt(getPoints),
     send_name: getUser.name,
     received_name: getRecipient.name,
-    note: getMessage
+    note: getMessage || ''
   };
   
   

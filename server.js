@@ -397,7 +397,6 @@ app.post('/slack/snap', async (request, response) => {
   checkSlackId(request.body.user_id, true);
 
   const getUser = await findUser(request.body.user_id);
-
   if (!getUser) {
     return response.status(200).json(
       {
@@ -410,7 +409,7 @@ app.post('/slack/snap', async (request, response) => {
             "author_icon": ":snap-ninja:",
             "title": "Link your Snap Ninja account to Slack",
             "text": `On the link slack page, input your user id: ${request.body.user_id}`,
-            "title_link": "http://localhost:3001/login/slack",
+            "title_link": "https://t-laird.com/login/slack",
             "footer": "SNAP NINJA",
             "footer_icon": ":snap-ninja:",
             "ts": "{time_short}"
@@ -455,8 +454,16 @@ app.post('/slack/snap', async (request, response) => {
     );
   }
 
-  const confirmPoints = new RegExp(/\d+$/);
-  const validPoints = confirmPoints.test(request.body.text);
+
+  const sentStuff = request.body.text;
+  const extractRecipient = new RegExp(/<@\w+\|\w+>\s+/);
+  const removeRecipient = sentStuff.replace(extractRecipient, '');
+  const extractPoints = new RegExp(/\d+/);
+  const getPoints = removeRecipient.match(extractPoints)[0];
+  const rmPoints = new RegExp(/\d+\s+/);
+  const getMessage = removeRecipient.replace(rmPoints, '');
+
+  const validPoints = getPoints;
 
   if (!validPoints) {
     return response.status(200).json(
@@ -466,8 +473,6 @@ app.post('/slack/snap', async (request, response) => {
       }
     );
   }
-
-  const getPoints = request.body.text.match(confirmPoints)[0];
   
   const lastSunday = findSunday(new Date(Date.now()));
   const getRecipient = await findUser(getReceivingSlackId[0]);
@@ -484,7 +489,7 @@ app.post('/slack/snap', async (request, response) => {
             "author_icon": ":snap-ninja:",
             "title": "Join a Group on Snap Ninja",
             "text": "Join the same group as the person you want to send points to!",
-            "title_link": "http://localhost:3001/joingroup",
+            "title_link": "https://t-laird.com/joingroup",
             "footer": "SNAP NINJA",
             "footer_icon": ":snap-ninja:",
             "ts": "{time_short}"
@@ -520,7 +525,7 @@ app.post('/slack/snap', async (request, response) => {
             "author_icon": ":snap-ninja:",
             "title": "Join a Group on Snap Ninja",
             "text": "Go to the 'Join Group' tab on the Slack Ninja website",
-            "title_link": "http://localhost:3001/login/slack",
+            "title_link": "https://t-laird.com/login/slack",
             "footer": "SNAP NINJA",
             "footer_icon": ":snap-ninja:",
             "ts": "{time_short}"
@@ -550,7 +555,8 @@ app.post('/slack/snap', async (request, response) => {
     group_id: getUser.group_id,
     point_value: parseInt(getPoints),
     send_name: getUser.name,
-    received_name: getRecipient.name
+    received_name: getRecipient.name,
+    note: getMessage
   };
   
   
